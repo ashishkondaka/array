@@ -9,6 +9,7 @@ import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import { Effect, Fiber, type Scope } from "effect";
 import type { AgentProvider } from "./agent-client";
+import { modelCannotThink, noThinkingValue } from "./bubbles/model-thinking"; // bubbles: no thinking level for a model that cannot think
 import { isRecord } from "./protocol";
 import {
   type ProviderClientOperationError,
@@ -253,6 +254,25 @@ export class AcpConfiguration {
       ["thought_level", effort],
     ] as const) {
       if (!value) continue;
+      // bubbles: a model that cannot think (its server says so) gets no thinking level. OpenCode would
+      // send `think` to the server, and Ollama refuses the whole turn for such a model. The session's
+      // own "default" value is set instead, which also clears a level the session kept from before.
+      if (category === "thought_level" && modelCannotThink(thread.currentModelId ?? model)) {
+        const thought = thread.configOptions.find(
+          (candidate): candidate is Extract<SessionConfigOption, { type: "select" }> =>
+            candidate.category === "thought_level" && candidate.type === "select",
+        );
+        const off = thought ? noThinkingValue(selectValues(thought).map((entry) => entry.value)) : null;
+        if (thought && off && thought.currentValue !== off) {
+          const response = yield* providerCall(() =>
+            this.options
+              .connection()
+              .setSessionConfigOption({ sessionId: thread.id, configId: thought.id, value: off }),
+          );
+          thread.configOptions = response.configOptions;
+        }
+        continue;
+      }
       if (category === "thought_level" && thread.currentModelId) {
         const currentModel = models.find((candidate) => candidate.id === thread.currentModelId);
         if (currentModel && currentModel.usesModelReasoningEffort !== null) {

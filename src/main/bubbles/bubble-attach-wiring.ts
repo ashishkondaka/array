@@ -10,8 +10,16 @@ import { BubbleAttachController } from "./bubble-attach";
 import type { BubbleWindowManager } from "./bubble-window-manager";
 
 import { LocalAnalystSeed } from "./local-analyst";
+import { ThinkingCapabilities } from "./thinking-capabilities";
 
-export type { BubbleAttachController, LocalAnalystSeed };
+export type { BubbleAttachController, LocalAnalystSeed, ThinkingCapabilities };
+
+/** Reads, from the local servers, which custom models cannot think, so no thinking level reaches them. */
+export function createThinkingCapabilities(
+  services: Pick<ApplicationServices, "customProviderChanges">,
+): ThinkingCapabilities {
+  return new ThinkingCapabilities({ providers: () => services.customProviderChanges.list(), fetch });
+}
 
 /** An action this recent counts as the agent working; after it, the orb goes back to its corner. */
 const WORK_FRESH_MS = 2_500;

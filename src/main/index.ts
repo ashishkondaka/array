@@ -35,8 +35,10 @@ import {
   type BubbleAttachController,
   createBubbleAttach,
   createLocalAnalystSeed,
+  createThinkingCapabilities,
   type LocalAnalystSeed,
-} from "./bubbles/bubble-attach-wiring"; // bubbles: attach, local analyst
+  type ThinkingCapabilities,
+} from "./bubbles/bubble-attach-wiring"; // bubbles: attach, local analyst, model capabilities
 import { BubbleWindowManager } from "./bubbles/bubble-window-manager"; // bubbles: window manager
 import {
   BUBBLES_APP_ID,
@@ -454,6 +456,7 @@ const bubbles = new BubbleWindowManager({
 // bubbles: drag-to-attach needs the Computer Use driver, so it is built with the services.
 let bubbleAttach: BubbleAttachController | null = null;
 let localAnalyst: LocalAnalystSeed | null = null;
+let thinkingCapabilities: ThinkingCapabilities | null = null; // bubbles: which local models cannot think
 
 let appIconColorImage: NativeImage | undefined;
 let backgroundTray: BackgroundTray | null = null;
@@ -1192,8 +1195,12 @@ if (!hasSingleInstanceLock) {
       service.on("event", (event) => forwardAgentEvent("local", event));
       service.on("event", (event) => event.type === "agents-changed" && bubbles.reconcileAgents()); // bubbles: deleted agents
       localAnalyst = createLocalAnalystSeed(built); // bubbles: local analyst seed
+      thinkingCapabilities = createThinkingCapabilities(built); // bubbles: which local models cannot think
       service.on("event", (event) => {
-        if (event.type === "status") void Effect.runPromise(localAnalyst?.tryCreate() ?? Effect.void); // bubbles: model catalogue changed
+        if (event.type !== "status") return;
+        // bubbles: the model catalogue changed: the seeded model may have arrived, and an endpoint may be new.
+        void Effect.runPromise(thinkingCapabilities?.refresh() ?? Effect.void);
+        void Effect.runPromise(localAnalyst?.tryCreate() ?? Effect.void);
       });
       // A routine or its owner can be deleted outside the events API. Its route is then revoked here.
       // Turns and channel messages also send these events, so only a deleted owner starts a sync.
@@ -1419,6 +1426,7 @@ if (!hasSingleInstanceLock) {
       }
       void runCauseEffect(built.agentInitialization.start())
         .then(() => Effect.runPromise(bubbles.restore())) // bubbles: reopen saved bubbles once agents exist
+        .then(() => Effect.runPromise(thinkingCapabilities?.refresh() ?? Effect.void)) // bubbles: before the first turn
         .then(() => Effect.runPromise(localAnalyst?.start() ?? Effect.void)) // bubbles: local analyst seed
         .catch((error) => {
           logger.error("Unable to initialize the local agent backend:", toLogValue(error));

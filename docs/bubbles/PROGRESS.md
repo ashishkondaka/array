@@ -349,6 +349,20 @@ composer, the orb's position read from its page every few seconds:
 The DMG was rebuilt from the committed tree with the feature: `verify:package` and the deep, strict
 signature check pass, and the main bundle holds `go_to_app` and the `<openbot_desktop>` block.
 
+Local Analyst (user report: every turn failed at once with `"llama3.2:latest" does not support
+thinking`). Found: Ollama refuses a request with `think: true` for a model without the "thinking"
+capability (`/api/show` lists `completion, tools` only); OpenCode sends `think` whenever a thinking
+level (its "variant") is applied, and declaring `reasoning: false` in its config does not stop it
+(checked with `opencode run -m local-ollama/llama3.2:latest#low`, which fails the same way, while a
+run without a variant answers). OpenBot applies the agent's reasoning effort (`low` by default; the
+contract has no "off") through `applyConfig`, so every Local Analyst turn carried a variant. Fix:
+`src/main/bubbles/thinking-capabilities.ts` asks each custom endpoint whose origin answers Ollama's
+`/api/tags` about its models with `/api/show`, and `src/backend/bubbles/model-thinking.ts` keeps the
+`provider/model` ids that cannot think; `applyConfig` skips the thinking level for them. Read before
+the first turn and on each catalogue change; an endpoint that is not Ollama says nothing and keeps
+OpenBot's behaviour. Unit tests: `thinking-capabilities.test.ts`. Seen in the dev log:
+`Read the thinking capability of the local models {"models":1,"withoutThinking":1}`.
+
 ## Status against the definition of done
 
 | Item | State |

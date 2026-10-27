@@ -115,3 +115,5 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | `src/backend/agent/developer-instructions.ts` | `isTurnContextBlock` knows the `<openbot_desktop>` block |
 | `src/main/cua-driver-daemon-client.ts` | `listApps()` (the driver's `list_apps`), beside `windowState()` |
 | `README.md` | Array's own README; upstream's moved unchanged to `docs/OPENBOT_README.md` |
+| `src/backend/acp-configuration.ts` | `applyConfig` sends no thinking level to a model in `model-thinking.ts`'s registry (Ollama says it cannot think) |
+| `src/main/index.ts` | `createThinkingCapabilities`: refreshed before the first turn and on each model catalogue change |
