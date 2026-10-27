@@ -67,6 +67,10 @@ told about the desktop.
   off; Reduce Motion in macOS turns all of it off.
 - **Orbs call each other.** When an agent messages another agent that has a bubble, the caller's
   orb visits the callee's.
+- **The theater.** Play a video (QuickTime, TV, VLC, IINA, a video site in your browser, or anything
+  full screen) and the idle bubbles file in, one after another, to a row of seats under the picture
+  and watch it, eyes turned to the screen; when it ends they float home. Any orb you click or drag
+  leaves its seat. "Lively bubbles" in the tray turns this off with the nudges and visits.
 
 ### A worker whose office is the desktop
 

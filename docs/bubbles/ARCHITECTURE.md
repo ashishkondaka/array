@@ -197,6 +197,25 @@ unknown) so the agent opens it with its own Computer Use `launch_app`; main neve
 or types, so the agent's approval policy still covers every action. The driver does not expose the
 Dock's icons, so the Dock stop is the middle of the strip; it is skipped when the Dock is hidden.
 
+### Scenes: the theater
+
+The bubbles react to what the screen is doing. `src/main/bubbles/scenes.ts` is the pure part: a
+scene is the front window when it is a show (a player app such as QuickTime Player, TV, IINA or
+VLC; a known browser whose title names a video site; or any window gone full screen), never OpenBot's
+own window or a bubble. `BubbleAttachController` looks every 4 s (`#sceneStep`), and only when
+`bubbles.canStage()`: lively bubbles on, not hidden, a free collapsed orb out; otherwise nothing is
+read. `nextSceneState` settles a show after two ticks of the same stage and ends it after two ticks
+without, so a glance at a video moves nobody. `BubbleWindowManager.setScene` seats the audience:
+every idle orb (the `#canWander` rules) gets a seat from `theaterSeats`, a row centred on the stage
+under its bottom edge, above its top edge when the bottom has no room, or a front row inside a
+full-screen stage; the orbs file in 140 ms apart on the visit spring, each marked `seated` so a state
+change does not snap it home, and each gets a `watch` cue with `gazeToward` (a unit direction to the
+stage's centre). The renderer turns the cue into `data-motion="watch"` with `--bubble-gaze-x/y`: the
+character leans and its avatar shifts toward the stage, and the body breathes slowly; reduced motion
+keeps the lean without the breathing. A stage that moves re-seats; a show that ends sends a `rest`
+cue and floats everyone home; a click or a drag on a seated orb ends its seat by itself. The saved
+places never change.
+
 ### Apple on-device model
 
 macOS 26 runs Apple Intelligence's language model on the Mac and exposes it to Swift only, through

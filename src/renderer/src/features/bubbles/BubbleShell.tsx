@@ -106,8 +106,13 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
     const app = hint();
     return app ? t("bubbles.attachHint", { app }) : null;
   };
-  // Carrying and arming win over the ambient motions.
-  const orbMotion = (): BubbleOrbMotion => (lifted() ? (hint() ? "armed" : "lift") : motion());
+  // Carrying and arming win over the ambient motions; a seat at a show wins over resting.
+  const gaze = () => bubbles.gazeOf(props.agentId);
+  const orbMotion = (): BubbleOrbMotion => {
+    if (lifted()) return hint() ? "armed" : "lift";
+    if (motion() === "rest" && gaze() && !prefersReducedMotion()) return "watch";
+    return motion();
+  };
 
   // The same derivations as the sidebar row, so the orb and the row never disagree.
   const sidebarState = createMemo(
@@ -283,6 +288,7 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
                 status={status()}
                 mood={mood()}
                 motion={orbMotion()}
+                gaze={gaze()}
                 attachHint={attachHintText()}
                 unreadCount={unreadReplies()[props.agentId] ?? 0}
                 attachedLabel={label()}

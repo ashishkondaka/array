@@ -14,7 +14,7 @@ import type { BubbleStatus } from "./bubble-status";
  * What the orb is doing besides resting: a short hop now and then, a wiggle beside the pointer,
  * lifted while carried, or armed over a window it would attach to on release.
  */
-export type BubbleOrbMotion = "rest" | "hop" | "nudge" | "lift" | "armed" | "greet";
+export type BubbleOrbMotion = "rest" | "hop" | "nudge" | "lift" | "armed" | "greet" | "watch";
 
 /** The avatar draws at the display rate while the orb moves, and at the shared 30 fps cap otherwise. */
 const MOVING_FPS = 120;
@@ -25,6 +25,8 @@ export interface BubbleOrbProps {
   status: BubbleStatus;
   mood: AvatarMood;
   motion: BubbleOrbMotion;
+  /** Where the orb looks while it watches a show: a unit direction. Null when it looks at the user. */
+  gaze?: { dx: number; dy: number } | null;
   unreadCount: number;
   /** "App — window title" while the bubble is attached to a window. */
   attachedLabel: string | null;
@@ -71,6 +73,7 @@ export function BubbleOrb(props: BubbleOrbProps) {
         class="bubble-orb"
         data-status={props.status}
         data-motion={props.motion}
+        style={{ "--bubble-gaze-x": String(props.gaze?.dx ?? 0), "--bubble-gaze-y": String(props.gaze?.dy ?? 0) }}
         aria-label={`${t("bubbles.expand", { name: props.agent.name })}. ${statusLabel()}`}
         title={props.attachHint ?? `${props.agent.name} · ${statusLabel()}\n${t("bubbles.attachTip")}`}
         onPointerDown={props.onPointerDown}

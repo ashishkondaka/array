@@ -1314,7 +1314,7 @@ if (!hasSingleInstanceLock) {
       // Before the renderer loads: the trust boundary and every protocol it fetches through have to
       // be in place before the first request can arrive.
       bubbleAttach = createBubbleAttach(built, bubbles); // bubbles: drag-to-attach
-      teardown.push(0, "bubble attach", () => bubbleAttach?.stop()); // bubbles: follow timer
+      teardown.push(0, "bubble attach", () => bubbleAttach?.dispose()); // bubbles: follow and scene timers
       registerIpcHandlers(built);
       void requestDesktopNotificationPermission(built.notificationPreference, language.translate).catch((error) =>
         logger.warn("Unable to ask for notification permission:", toLogValue(error)),

@@ -375,7 +375,20 @@ checked with curl: `/health`, `/v1/models`, a chat completion "Tokyo is the capi
 SSE stream "1, 2, …"), `scripts/build-apple-model-server.ts` (in `dist:mac`, shipped as a resource
 beside the driver, skipped without Swift), and `src/main/bubbles/apple-model.ts` (server lifecycle,
 the `apple-intelligence` endpoint saved or refreshed to the port, the model registered as unable to
-think, the "Apple Analyst" seed). Unit tests: `apple-model.test.ts`.
+think, the "Apple Analyst" seed). Unit tests: `apple-model.test.ts`. Live: the first turn failed on
+size (OpenBot's developer instructions are ~15 k tokens; the model allows 8 192 on this Mac), so the
+server now budgets the prompt (instructions head 9 000 characters, conversation tail 7 000; checked
+with a 53 k-character system prompt: "Array is a personal, noncommercial fork of OpenBot…"). After
+that the Apple Analyst answered in the dev app in 4.5 s. The build script had to call `swiftc`
+through `xcrun` (by its path it cannot load the standard library). The DMG was rebuilt with the
+server inside (`Resources/apple-model-server/darwin/arm64`, ad-hoc signed with the app).
+
+Scenes (user request: "if I play a video, all of them line up and look at it like at a theater"):
+`scenes.ts` (detection, seats, gaze, the two-tick settle), the `watch`/`rest` motion cues with a
+gaze, `BubbleWindowManager.setScene` and the 4 s scene step in the attach controller. The renderer
+leans the character and its avatar toward the stage and breathes it slowly. Unit tests:
+`scenes.test.ts`. Not yet run live: it needs a video in front of an unlocked screen and the
+Computer Use driver's window list.
 
 ## Status against the definition of done
 

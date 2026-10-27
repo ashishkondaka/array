@@ -28,11 +28,14 @@ const Bubbles = createSimpleContext({
       hints: Record<string, string | undefined>;
       /** Counts the greets main asked each bubble to play; a change plays one. */
       greets: Record<string, number | undefined>;
+      /** Where each seated bubble looks while a show is on; absent when it looks at the user. */
+      gazes: Record<string, { dx: number; dy: number } | undefined>;
     }>({
       snapshot: { bubbles: [], hidden: false, characters: [], nudges: true },
       issues: {},
       hints: {},
       greets: {},
+      gazes: {},
     });
     const local = () => activeServerId() === LOCAL_SERVER_ID;
 
@@ -57,9 +60,11 @@ const Bubbles = createSimpleContext({
           draft.hints[agentId] = app ?? undefined;
         }),
       );
-      const unsubscribeCue = port.onMotionCue(({ agentId }) =>
+      const unsubscribeCue = port.onMotionCue((cue) =>
         setState((draft) => {
-          draft.greets[agentId] = (draft.greets[agentId] ?? 0) + 1;
+          if (cue.cue === "greet") draft.greets[cue.agentId] = (draft.greets[cue.agentId] ?? 0) + 1;
+          else if (cue.cue === "watch") draft.gazes[cue.agentId] = cue.gaze;
+          else delete draft.gazes[cue.agentId];
         }),
       );
       return () => {
@@ -90,6 +95,7 @@ const Bubbles = createSimpleContext({
       issueOf: (agentId: string) => state.issues[agentId] ?? null,
       hintOf: (agentId: string) => state.hints[agentId] ?? null,
       greetsOf: (agentId: string) => state.greets[agentId] ?? 0,
+      gazeOf: (agentId: string) => state.gazes[agentId] ?? null,
       bubbleCount: () => state.snapshot.bubbles.length,
       /** A social visit, or with an agent id, answering that agent's call. */
       visit: (caller: string | null = null) => send(port().visit(caller)),

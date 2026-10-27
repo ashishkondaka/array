@@ -93,3 +93,31 @@ export function gazeToward(seat: { x: number; y: number }, stage: BubbleBounds):
 export function sameStage(a: Scene | null, b: Scene | null): boolean {
   return a?.window.windowId === b?.window.windowId && a?.kind === b?.kind;
 }
+
+/** A scene must hold for this many ticks before the bubbles move: a glance at a video is not a show. */
+export const SCENE_SETTLE_TICKS = 2;
+
+export interface SceneState {
+  /** The show the bubbles are at, or null. */
+  current: Scene | null;
+  /** What the last tick saw, and for how many ticks in a row. */
+  candidate: Scene | null;
+  streak: number;
+}
+
+export const NO_SCENE: SceneState = { current: null, candidate: null, streak: 0 };
+
+/**
+ * One tick: the detected scene becomes the current one after `SCENE_SETTLE_TICKS` ticks of the same
+ * stage, and the current one ends after as many ticks without it. A stage that moved keeps the
+ * show and the new bounds.
+ */
+export function nextSceneState(state: SceneState, detected: Scene | null): SceneState {
+  const streak = sameStage(state.candidate, detected) ? state.streak + 1 : 1;
+  const candidate = detected;
+  if (sameStage(state.current, detected)) {
+    return { current: detected, candidate, streak };
+  }
+  if (streak >= SCENE_SETTLE_TICKS) return { current: detected, candidate, streak };
+  return { ...state, candidate, streak };
+}

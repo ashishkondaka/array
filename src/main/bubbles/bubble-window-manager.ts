@@ -12,6 +12,7 @@ import {
   type BubbleBounds,
   type BubbleCharacterId,
   type BubbleDragPoint,
+  type BubbleMotionCue,
   type BubbleState,
   type BubblesSnapshot,
   IPC_ENDPOINTS,
@@ -47,6 +48,7 @@ import {
 } from "./bubble-motion";
 import { BUBBLES_STATE_FILE, copyBubble, decodeBubblesFile, EMPTY_BUBBLES, newBubble } from "./bubble-state-file";
 import { setBubbleWindowSource } from "./bubble-window-registry";
+import { gazeToward, theaterSeats } from "./scenes";
 
 const logger = createOpenBotLogger("bubbles");
 
@@ -108,6 +110,8 @@ interface OpenBubble {
   shownExpanded: boolean;
   /** Following the agent's own Computer Use actions over its attached window. */
   working: boolean;
+  /** In a seat at a show on the screen (`setScene`); the saved place is kept for after it. */
+  seated?: boolean;
   lastVisitAt: number;
   /** Waiting beside the pointer to go home; a drag or a click there cancels the trip home. */
   homeTimer: ReturnType<typeof setTimeout> | null;
@@ -132,6 +136,8 @@ const VISIT_HOLD_MS = 2_600;
 const NUDGE_HOLD_MS = 4_500;
 /** How long the orb pauses at each stop of a trip to an app (by the Dock, as if to open the app). */
 const JOURNEY_HOLD_MS = 360;
+/** The audience files in one orb after another, not all at once. */
+const SEAT_STAGGER_MS = 140;
 /** The close of an open panel finishes before the orb leaves on a trip. */
 const JOURNEY_AFTER_CLOSE_MS = 420;
 /** The orb moves once per display frame: 8.3 ms on a 120 Hz display, never slower than 60 Hz. */
@@ -528,6 +534,7 @@ export class BubbleWindowManager {
       !bubble.attached &&
       !open.dragging &&
       !open.visiting &&
+      !open.seated &&
       !open.nudge &&
       !open.homeTimer
     );
@@ -551,7 +558,78 @@ export class BubbleWindowManager {
   }
 
   #cue(agentId: string): void {
-    sendToRenderer(this.#open.get(agentId)?.window, IPC_ENDPOINTS.bubbles.motionCue, { agentId, cue: "greet" });
+    this.#cueMotion(agentId, { agentId, cue: "greet" });
+  }
+
+  #cueMotion(agentId: string, cue: BubbleMotionCue): void {
+    sendToRenderer(this.#open.get(agentId)?.window, IPC_ENDPOINTS.bubbles.motionCue, cue);
+  }
+
+  /** Whether a show could seat anyone: lively bubbles on, not hidden, and a free collapsed orb out. */
+  canStage(): boolean {
+    return (
+      this.#state.nudges &&
+      !this.#state.hidden &&
+      this.#state.bubbles.some((bubble) => !bubble.expanded && !bubble.attached && this.#open.has(bubble.agentId))
+    );
+  }
+
+  /** The displays' full bounds, for telling a full-screen window. */
+  displayBounds(): BubbleBounds[] {
+    return screen.getAllDisplays().map((display) => display.bounds);
+  }
+
+  /**
+   * A show on the screen: every idle orb takes a seat in a row along the stage, one after another,
+   * and looks at it; an orb already in its seat only gets the new gaze. Null ends the show: the
+   * seated orbs look at the user again and float home. A click or a drag on a seated orb ends its
+   * seat by itself (`#stopNudge`). The saved places never change.
+   */
+  setScene(scene: { stage: BubbleBounds } | null): void {
+    if (!scene) {
+      for (const [agentId, open] of this.#open) if (open.seated) this.#unseat(agentId, open);
+      return;
+    }
+    const audience = this.#state.bubbles.filter((bubble) => {
+      const open = this.#open.get(bubble.agentId);
+      return open !== undefined && (open.seated === true || this.#canWander(open, bubble));
+    });
+    if (audience.length === 0) return;
+    const seats = theaterSeats(scene.stage, audience.length, workAreaFor(scene.stage, this.#workAreas()));
+    audience.forEach((bubble, index) => {
+      const open = this.#open.get(bubble.agentId);
+      const seat = seats[index];
+      if (!open || !seat || open.window.isDestroyed()) return;
+      const gaze = gazeToward(seat, scene.stage);
+      const [x = 0, y = 0] = open.window.getPosition();
+      if (open.seated && Math.abs(x - seat.x) < 2 && Math.abs(y - seat.y) < 2) {
+        this.#cueMotion(bubble.agentId, { agentId: bubble.agentId, cue: "watch", gaze });
+        return;
+      }
+      open.seated = true;
+      open.visiting = true;
+      open.window.showInactive();
+      setTimeout(() => {
+        if (!open.seated || open.window.isDestroyed()) return;
+        this.#travel(
+          bubble.agentId,
+          seat,
+          () => {
+            if (open.seated) this.#cueMotion(bubble.agentId, { agentId: bubble.agentId, cue: "watch", gaze });
+          },
+          VISIT_RESPONSE,
+        );
+      }, index * SEAT_STAGGER_MS);
+    });
+  }
+
+  #unseat(agentId: string, open: OpenBubble): void {
+    open.seated = false;
+    open.visiting = false;
+    this.#cueMotion(agentId, { agentId, cue: "rest" });
+    const home = this.#find(agentId);
+    if (home && !home.expanded && !open.window.isDestroyed())
+      this.#travel(agentId, home, () => undefined, VISIT_RESPONSE);
   }
 
   /**
@@ -608,6 +686,10 @@ export class BubbleWindowManager {
     open.nudge = null;
     open.homeTimer = null;
     open.visiting = false;
+    if (open.seated) {
+      open.seated = false;
+      this.#cueMotion(agentId, { agentId, cue: "rest" });
+    }
     const bubble = this.#find(agentId);
     if (restore && bubble && !open.window.isDestroyed()) this.#applyBounds(open, bubble);
   }
@@ -729,8 +811,8 @@ export class BubbleWindowManager {
       bubbles: this.#state.bubbles.map((bubble) => (bubble.agentId === agentId ? next : bubble)),
     };
     const open = this.#open.get(agentId);
-    // A drag or work in progress holds the window where it is; it settles when they end.
-    if (open && !open.dragging && !open.working) this.#applyBounds(open, next);
+    // A drag, work in progress or a seat at a show holds the window where it is; it settles when they end.
+    if (open && !open.dragging && !open.working && !open.seated) this.#applyBounds(open, next);
     this.#afterChange(true);
   }
 

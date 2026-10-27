@@ -3,7 +3,7 @@
 import { BUBBLE_LIMITS } from "@openbot/contracts/ipc";
 import { describe, expect, it } from "vitest";
 import type { DesktopWindow } from "./attach-target";
-import { detectScene, gazeToward, isFullScreen, sameStage, theaterSeats } from "./scenes";
+import { detectScene, gazeToward, isFullScreen, NO_SCENE, nextSceneState, sameStage, theaterSeats } from "./scenes";
 
 const DISPLAY = { x: 0, y: 0, width: 1512, height: 982 };
 const WORK = { x: 0, y: 38, width: 1512, height: 868 };
@@ -67,6 +67,33 @@ describe("theaterSeats", () => {
     const seats = theaterSeats({ x: -400, y: 120, width: 300, height: 200 }, 2, WORK);
     expect(seats.every((seat) => seat.x >= 12)).toBe(true);
     expect(theaterSeats(DISPLAY, 0, WORK)).toEqual([]);
+  });
+});
+
+describe("nextSceneState", () => {
+  const show = { kind: "theater" as const, window: window(7, "TV") };
+
+  it("starts a show after two ticks of the same stage, and ends it after two ticks without", () => {
+    const one = nextSceneState(NO_SCENE, show);
+    expect(one.current).toBeNull();
+    const two = nextSceneState(one, show);
+    expect(two.current?.window.windowId).toBe(7);
+    const gone1 = nextSceneState(two, null);
+    expect(gone1.current?.window.windowId).toBe(7);
+    const gone2 = nextSceneState(gone1, null);
+    expect(gone2.current).toBeNull();
+  });
+
+  it("keeps the show when the stage moves, and does not flicker on a glance elsewhere", () => {
+    const on = nextSceneState(nextSceneState(NO_SCENE, show), show);
+    const moved = {
+      kind: "theater" as const,
+      window: window(7, "TV", { bounds: { x: 300, y: 200, width: 900, height: 560 } }),
+    };
+    expect(nextSceneState(on, moved).current?.window.bounds.x).toBe(300);
+    const glance = nextSceneState(on, { kind: "theater", window: window(9, "VLC") });
+    expect(glance.current?.window.windowId).toBe(7);
+    expect(nextSceneState(glance, show).current?.window.windowId).toBe(7);
   });
 });
 

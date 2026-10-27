@@ -104,14 +104,35 @@ export interface BubbleAttachStatus {
   issue: BubbleAttachIssue | null;
 }
 
-/** A moment the orb plays, which main choreographs: "greet" when two bubbles meet on a visit. */
-export interface BubbleMotionCue {
-  agentId: string;
-  cue: "greet";
+/** Where an orb looks: a unit direction in desktop space, from its centre to what it watches. */
+export interface BubbleGaze {
+  dx: number;
+  dy: number;
+}
+
+/**
+ * A moment the orb plays, which main choreographs: "greet" when two bubbles meet on a visit, "watch"
+ * (with a gaze) when a show starts on the screen and the orb takes its seat, "rest" when it ends.
+ */
+export type BubbleMotionCue =
+  | { agentId: string; cue: "greet" }
+  | { agentId: string; cue: "watch"; gaze: BubbleGaze }
+  | { agentId: string; cue: "rest" };
+
+function isGaze(value: unknown): value is BubbleGaze {
+  return (
+    isDynamicRecord(value) &&
+    typeof value.dx === "number" &&
+    typeof value.dy === "number" &&
+    Math.abs(value.dx) <= 1 &&
+    Math.abs(value.dy) <= 1
+  );
 }
 
 export function isBubbleMotionCue(value: unknown): value is BubbleMotionCue {
-  return isDynamicRecord(value) && isIdentifier(value.agentId) && value.cue === "greet";
+  if (!isDynamicRecord(value) || !isIdentifier(value.agentId)) return false;
+  if (value.cue === "greet" || value.cue === "rest") return true;
+  return value.cue === "watch" && isGaze(value.gaze);
 }
 
 /** While a dragged orb rests over a window: the app a release would attach it to. Null when none. */

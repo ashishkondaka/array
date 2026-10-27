@@ -32,6 +32,7 @@ import {
 } from "./attach-target";
 import { separateOrb } from "./bubble-layout";
 import type { BubbleWindowManager } from "./bubble-window-manager";
+import { detectScene, NO_SCENE, nextSceneState, type SceneState, sameStage } from "./scenes";
 
 const logger = createOpenBotLogger("bubbles-attach");
 
@@ -48,6 +49,8 @@ export interface WindowReads {
 
 /** A trip to an app's window ends by itself when a drag or a close cuts it short. */
 const JOURNEY_TIMEOUT_MS = 6_000;
+/** How often the desktop is read for a show. Only a tick that finds a free orb reads anything. */
+const SCENE_TICK_MS = 4_000;
 
 export interface BubbleAttachOptions {
   bubbles: BubbleWindowManager;
@@ -93,6 +96,8 @@ export class BubbleAttachController {
   readonly #options: BubbleAttachOptions;
   #follow: ReturnType<typeof setInterval> | null = null;
   #workTick: ReturnType<typeof setInterval> | null = null;
+  #sceneTick: ReturnType<typeof setInterval> | null = null;
+  #scene: SceneState = NO_SCENE;
   /** Where each working orb was last sent, by agent. */
   readonly #workingAt = new Map<string, { x: number; y: number }>();
 
@@ -126,6 +131,7 @@ export class BubbleAttachController {
         : Promise.resolve(null),
     );
     this.#syncFollow();
+    this.#sceneTick = setInterval(() => void Effect.runPromise(this.#sceneStep()), SCENE_TICK_MS);
   }
 
   detach(agentId: string): void {
@@ -150,6 +156,47 @@ export class BubbleAttachController {
     if (this.#workTick) clearInterval(this.#workTick);
     this.#follow = null;
     this.#workTick = null;
+  }
+
+  /** Stops every timer, the scene watch included: the controller is done. */
+  dispose(): void {
+    this.stop();
+    if (this.#sceneTick) clearInterval(this.#sceneTick);
+    this.#sceneTick = null;
+  }
+
+  /**
+   * One look at the desktop for a show. Nothing is read unless a free orb could take a seat, so a
+   * desktop with no bubbles, or with every bubble busy, costs nothing. A show that settles seats the
+   * audience; a stage that moves re-seats it; a show that ends sends it home.
+   */
+  #sceneStep(): Effect.Effect<void> {
+    return Effect.gen({ self: this }, function* () {
+      const bubbles = this.#options.bubbles;
+      if (!this.#options.driverReady() || !bubbles.canStage()) {
+        if (this.#scene.current) bubbles.setScene(null);
+        this.#scene = NO_SCENE;
+        return;
+      }
+      const windows = yield* this.#windows();
+      const detected = detectScene(
+        windows,
+        this.#options.ownPid,
+        this.#options.bubbleWindowIds(),
+        bubbles.displayBounds(),
+      );
+      const before = this.#scene.current;
+      this.#scene = nextSceneState(this.#scene, detected);
+      const now = this.#scene.current;
+      if (!now) {
+        if (before) bubbles.setScene(null);
+        return;
+      }
+      const moved =
+        !sameStage(before, now) || JSON.stringify(before?.window.bounds) !== JSON.stringify(now.window.bounds);
+      // A show that holds still seats a newcomer too: an orb that just finished its work.
+      if (moved || bubbles.canStage()) bubbles.setScene({ stage: now.window.bounds });
+    }).pipe(Effect.catch(() => Effect.void));
   }
 
   /**
