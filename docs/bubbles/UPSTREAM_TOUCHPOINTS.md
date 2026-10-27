@@ -114,3 +114,4 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | `src/backend/agent/openbot-tool-router.ts` | dispatches `go_to_app` to `desktop-worker.ts`, after the Computer Use check |
 | `src/backend/agent/developer-instructions.ts` | `isTurnContextBlock` knows the `<openbot_desktop>` block |
 | `src/main/cua-driver-daemon-client.ts` | `listApps()` (the driver's `list_apps`), beside `windowState()` |
+| `README.md` | Array's own README; upstream's moved unchanged to `docs/OPENBOT_README.md` |
