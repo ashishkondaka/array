@@ -2,7 +2,15 @@
 
 import { BUBBLE_LIMITS } from "@openbot/contracts/ipc";
 import { describe, expect, it } from "vitest";
-import { nudgeTarget, type SpringState, springSettled, springStep } from "./bubble-motion";
+import {
+  nudgeTarget,
+  releaseVelocity,
+  type SpringState,
+  springSettled,
+  springStep,
+  THROW_MIN_SPEED,
+  throwTarget,
+} from "./bubble-motion";
 
 const primary = { x: 0, y: 25, width: 1440, height: 875 };
 const right = { x: 1440, y: 0, width: 1920, height: 1080 };
@@ -40,5 +48,40 @@ describe("the nudge spring", () => {
     const redirected = springStep(moving, 0, 1 / 60);
     expect(moving.velocity).toBeGreaterThan(0);
     expect(redirected.position).toBeGreaterThan(moving.position);
+  });
+});
+
+describe("throwing an orb", () => {
+  it("reads the release speed from the last 100 ms only", () => {
+    const samples = [
+      { x: 0, y: 0, at: 0 },
+      { x: 10, y: 0, at: 900 },
+      { x: 110, y: 50, at: 1000 },
+    ];
+    expect(releaseVelocity(samples)).toEqual({ x: 1000, y: 500 });
+    expect(releaseVelocity([])).toEqual({ x: 0, y: 0 });
+    expect(releaseVelocity([{ x: 5, y: 5, at: 3 }])).toEqual({ x: 0, y: 0 });
+  });
+
+  it("projects a throw forward and keeps it on the display", () => {
+    const glide = throwTarget({ x: 400, y: 400 }, { x: 1000, y: 0 }, [primary]);
+    expect(glide.x).toBeGreaterThan(400 + 150);
+    expect(glide.y).toBe(400);
+    const wall = throwTarget({ x: 1300, y: 400 }, { x: 5000, y: 0 }, [primary]);
+    expect(wall.x).toBe(1440 - BUBBLE_LIMITS.orbSize);
+  });
+
+  it("treats a slow release as a placement", () => {
+    expect(THROW_MIN_SPEED).toBeGreaterThan(0);
+    expect(
+      Math.hypot(
+        ...Object.values(
+          releaseVelocity([
+            { x: 0, y: 0, at: 0 },
+            { x: 2, y: 0, at: 50 },
+          ]),
+        ),
+      ),
+    ).toBeLessThan(THROW_MIN_SPEED);
   });
 });

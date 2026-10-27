@@ -13,6 +13,7 @@ import {
   FolderPlus,
   Hash,
   IconButton,
+  MessageCirclePlus,
   Puzzle,
 } from "@openbot/ui";
 import { Show } from "solid-js";
@@ -146,6 +147,13 @@ export function SidebarTopbar() {
                   <DropdownMenu.Item onSelectAfterClose={props.onCreateAgent}>
                     <Bot aria-hidden="true" />
                     {t("sidebar.new.agent")}
+                  </DropdownMenu.Item>
+                </Show>
+                {/* bubbles: a plain chat beside the agents */}
+                <Show when={props.onCreateChat}>
+                  <DropdownMenu.Item onSelectAfterClose={() => props.onCreateChat?.()}>
+                    <MessageCirclePlus aria-hidden="true" />
+                    {t("bubbles.newChat")}
                   </DropdownMenu.Item>
                 </Show>
                 <Show when={props.onCreateChannel}>

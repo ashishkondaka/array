@@ -22,6 +22,7 @@ import { agentThreadAttention } from "../agents/agent-thread-attention";
 import { useAgents } from "../agents/agents-context";
 import { useBubbles } from "../bubbles/bubbles-context"; // bubbles: desktop bubbles
 import { useChannels } from "../channels/channels-context";
+import { useNewChat } from "../chats/new-chat"; // bubbles: plain chats
 import { useConversation } from "../conversation/conversation-context";
 import { useDirectMessages } from "../conversation/direct-messages-context";
 import { useServerActions } from "../servers/server-actions";
@@ -55,6 +56,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
   const layout = useLayout();
   const platform = usePlatform();
   const bubbles = useBubbles(); // bubbles: desktop bubbles
+  const newChat = useNewChat(); // bubbles: plain chats
   const channels = useChannels();
   const { activeServer, activeServerId, activeServerSupportsCapability } = useServers();
   // The chats that main shows in a window of their own. Main sends the list on each change.
@@ -266,6 +268,15 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
         channels.close();
         openAgentSetup();
       }}
+      // bubbles: a plain chat, made as a tool-less agent
+      onCreateChat={
+        !platform.landingPreview
+          ? () => {
+              channels.close();
+              void newChat.createChat();
+            }
+          : undefined
+      }
       onEditAgent={editAgent}
       duplicateSupported={activeServerSupportsCapability("agent-duplication")}
       duplicatingAgentIds={duplicatingAgentIds()}

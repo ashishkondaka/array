@@ -104,6 +104,12 @@ export interface BubbleAttachStatus {
   issue: BubbleAttachIssue | null;
 }
 
+/** While a dragged orb rests over a window: the app a release would attach it to. Null when none. */
+export interface BubbleAttachHint {
+  agentId: string;
+  app: string | null;
+}
+
 /** Where a dragged orb is now: its top-left corner, in desktop points. */
 export interface BubbleDragPoint {
   x: number;
@@ -197,4 +203,12 @@ export function isBubbleAttachStatus(value: unknown): value is BubbleAttachStatu
 
 export function isBubbleDragPoint(value: unknown): value is BubbleDragPoint {
   return isDynamicRecord(value) && isCoordinate(value.x) && isCoordinate(value.y);
+}
+
+export function isBubbleAttachHint(value: unknown): value is BubbleAttachHint {
+  return (
+    isDynamicRecord(value) &&
+    isIdentifier(value.agentId) &&
+    (value.app === null || isBoundedString(value.app, BUBBLE_LIMITS.appName))
+  );
 }

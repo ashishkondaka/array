@@ -194,6 +194,7 @@ import type {
 } from "./ipc-browser-profiles";
 import type { LocalBrowserSecretResponse } from "./ipc-browser-secret";
 import type {
+  BubbleAttachHint,
   BubbleAttachStatus,
   BubbleCharacterInput,
   BubbleDragPoint,
@@ -876,6 +877,8 @@ export const IPC_ENDPOINTS = {
     changed: event<BubblesSnapshot>()("bubbles:changed"),
     /** Why the last drop of a bubble did not attach; null when it did. */
     attachStatus: event<BubbleAttachStatus>()("bubbles:attach-status"),
+    /** The app a dragged orb would attach to if released now, after it rested over its window. */
+    attachHint: event<BubbleAttachHint>()("bubbles:attach-hint"),
   },
   computerUse: {
     getState: request<undefined, ComputerUseState>()("computer-use:get-state"),

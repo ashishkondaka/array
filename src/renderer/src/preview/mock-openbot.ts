@@ -1068,6 +1068,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       openAttachedInBrowser: async () => undefined,
       onChanged: () => () => undefined,
       onAttachStatus: () => () => undefined,
+      onAttachHint: () => () => undefined,
     },
     // The preview has no native page, so the overlay is never on screen and the DOM dock stays.
     browserDock: {

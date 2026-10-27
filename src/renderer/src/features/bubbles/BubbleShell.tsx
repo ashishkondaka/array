@@ -54,6 +54,10 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
   const label = () => attachedLabel(state()?.attached ?? null);
   const character = () => bubbleCharacter(bubbles.characterOf(props.agentId));
   const [motion, setMotion] = createSignal<BubbleOrbMotion>("rest");
+  const [lifted, setLifted] = createSignal(false);
+  const hint = () => bubbles.hintOf(props.agentId);
+  // Carrying and arming win over the ambient motions.
+  const orbMotion = (): BubbleOrbMotion => (lifted() ? (hint() ? "armed" : "lift") : motion());
 
   // The same derivations as the sidebar row, so the orb and the row never disagree.
   const sidebarState = createMemo(
@@ -104,6 +108,7 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
     moveTo: bubbles.dragTo,
     end: bubbles.dragEnd,
     click: () => bubbles.setExpanded(props.agentId, true),
+    lift: setLifted,
   });
 
   let motionTimer: ReturnType<typeof setTimeout> | undefined;
@@ -179,7 +184,8 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
                 character={character()}
                 status={status()}
                 mood={mood()}
-                motion={motion()}
+                motion={orbMotion()}
+                attachHint={hint() ? t("bubbles.attachHint", { app: hint() ?? "" }) : null}
                 unreadCount={unreadReplies()[props.agentId] ?? 0}
                 attachedLabel={label()}
                 onPointerDown={drag.pointerDown}

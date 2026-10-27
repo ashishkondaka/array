@@ -100,6 +100,41 @@ html[data-bubble-window] body {
   margin: -14%;
 }
 
+/* Carried: the character lifts toward the user and the orb casts a longer shadow. */
+.bubble-orb .bubble-orb-body {
+  transition: transform var(--openbot-duration-fast) var(--openbot-ease-out);
+}
+
+.bubble-orb[data-motion="lift"] .bubble-orb-body,
+.bubble-orb[data-motion="armed"] .bubble-orb-body {
+  transform: scale(1.1);
+}
+
+.bubble-orb.ui-button[data-motion="lift"],
+.bubble-orb.ui-button[data-motion="armed"] {
+  box-shadow:
+    inset 0 1px 0 var(--bubble-glass-rim),
+    inset 0 0 0 1px var(--bubble-glass-rim-soft),
+    0 var(--openbot-space-3) var(--openbot-space-6) var(--bubble-glass-depth);
+  cursor: grabbing;
+}
+
+/* Armed over a window: the edge glows in the accent and breathes, like a magnet that has caught. */
+.bubble-orb[data-motion="armed"] .bubble-orb-ring {
+  border-color: var(--openbot-accent);
+  animation: bubble-orb-armed var(--openbot-duration-slow) var(--openbot-ease-in-out) infinite alternate;
+}
+
+@keyframes bubble-orb-armed {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--openbot-accent) 45%, transparent);
+  }
+
+  to {
+    box-shadow: 0 0 0 var(--openbot-space-1-5) color-mix(in oklab, var(--openbot-accent) 25%, transparent);
+  }
+}
+
 .bubble-orb[data-motion="hop"] .bubble-orb-body {
   animation: bubble-orb-hop calc(var(--openbot-duration-slow) * 2) var(--openbot-ease-out) both;
   will-change: transform;
@@ -394,6 +429,11 @@ html[data-bubble-window="collapsed"] [data-sonner-toaster] {
   }
 
   .bubble-orb[data-motion] .bubble-orb-body {
+    animation: none;
+    transition: none;
+  }
+
+  .bubble-orb[data-motion="armed"] .bubble-orb-ring {
     animation: none;
   }
 

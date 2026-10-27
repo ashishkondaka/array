@@ -10,8 +10,11 @@ import { Show } from "solid-js";
 import type { BubbleCharacter } from "./bubble-characters";
 import type { BubbleStatus } from "./bubble-status";
 
-/** What the orb is doing besides resting: a short hop now and then, or a wiggle beside the pointer. */
-export type BubbleOrbMotion = "rest" | "hop" | "nudge";
+/**
+ * What the orb is doing besides resting: a short hop now and then, a wiggle beside the pointer,
+ * lifted while carried, or armed over a window it would attach to on release.
+ */
+export type BubbleOrbMotion = "rest" | "hop" | "nudge" | "lift" | "armed";
 
 /** The avatar draws at the display rate while the orb moves, and at the shared 30 fps cap otherwise. */
 const MOVING_FPS = 120;
@@ -25,6 +28,8 @@ export interface BubbleOrbProps {
   unreadCount: number;
   /** "App — window title" while the bubble is attached to a window. */
   attachedLabel: string | null;
+  /** "Release to attach to App" while armed. */
+  attachHint: string | null;
   /** The orb is the drag handle; the renderer reads the pointer through these. */
   onPointerDown: (event: PointerEvent & { currentTarget: HTMLElement }) => void;
   onPointerMove: (event: PointerEvent & { currentTarget: HTMLElement }) => void;
@@ -58,7 +63,7 @@ export function BubbleOrb(props: BubbleOrbProps) {
         data-status={props.status}
         data-motion={props.motion}
         aria-label={`${t("bubbles.expand", { name: props.agent.name })}. ${statusLabel()}`}
-        title={`${props.agent.name} · ${statusLabel()}`}
+        title={props.attachHint ?? `${props.agent.name} · ${statusLabel()}`}
         onPointerDown={props.onPointerDown}
         onPointerMove={props.onPointerMove}
         onPointerUp={props.onPointerUp}

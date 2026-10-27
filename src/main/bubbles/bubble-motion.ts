@@ -53,3 +53,43 @@ export function springStep(state: SpringState, target: number, seconds: number):
 export function springSettled(state: SpringState, target: number): boolean {
   return Math.abs(state.position - target) < 0.5 && Math.abs(state.velocity) < 5;
 }
+
+/** A pointer sample of a drag, in desktop points and milliseconds. */
+export interface DragSample {
+  x: number;
+  y: number;
+  at: number;
+}
+
+/** Only the last stretch of a drag says how fast it was released. */
+const VELOCITY_WINDOW_MS = 100;
+/** Below this the release is a placement, not a throw, and the orb stays where it was let go. */
+export const THROW_MIN_SPEED = 400;
+/** Apple's scroll-style projection, a little snappier than a page (0.998) so the orb does not fly far. */
+const DECELERATION = 0.995;
+
+/** The release velocity in points per second, from the samples of the last 100 ms. */
+export function releaseVelocity(samples: readonly DragSample[]): { x: number; y: number } {
+  const last = samples.at(-1);
+  if (!last) return { x: 0, y: 0 };
+  const first = samples.find((sample) => last.at - sample.at <= VELOCITY_WINDOW_MS) ?? last;
+  const seconds = (last.at - first.at) / 1000;
+  if (seconds <= 0) return { x: 0, y: 0 };
+  return { x: (last.x - first.x) / seconds, y: (last.y - first.y) / seconds };
+}
+
+/** Where a thrown orb comes to rest: momentum projected forward, then kept on a display. */
+export function throwTarget(
+  from: { x: number; y: number },
+  velocity: { x: number; y: number },
+  workAreas: readonly BubbleBounds[],
+): { x: number; y: number } {
+  const project = (speed: number) => ((speed / 1000) * DECELERATION) / (1 - DECELERATION);
+  const resting = { x: from.x + project(velocity.x), y: from.y + project(velocity.y) };
+  const size = BUBBLE_LIMITS.orbSize;
+  const area = workAreaFor({ ...resting, width: size, height: size }, workAreas);
+  return {
+    x: Math.round(Math.min(Math.max(resting.x, area.x), area.x + area.width - size)),
+    y: Math.round(Math.min(Math.max(resting.y, area.y), area.y + area.height - size)),
+  };
+}

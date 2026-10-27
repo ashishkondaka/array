@@ -17,6 +17,8 @@ export interface BubbleDragOptions {
   moveTo: (point: { x: number; y: number }) => void;
   end: () => void;
   click: () => void;
+  /** The orb is picked up (true) or put down (false): it lifts while it is carried. */
+  lift: (lifted: boolean) => void;
 }
 
 export function createBubbleDrag(options: BubbleDragOptions) {
@@ -48,6 +50,7 @@ export function createBubbleDrag(options: BubbleDragOptions) {
       if (!press) return;
       if (!press.dragging && Math.hypot(event.screenX - press.startX, event.screenY - press.startY) < CLICK_SLOP)
         return;
+      if (!press.dragging) options.lift(true);
       press.dragging = true;
       pending = { x: Math.round(event.screenX - press.offsetX), y: Math.round(event.screenY - press.offsetY) };
       if (!frame) frame = requestAnimationFrame(flushMove);
@@ -59,6 +62,7 @@ export function createBubbleDrag(options: BubbleDragOptions) {
       if (frame) cancelAnimationFrame(frame);
       flushMove();
       suppressClick = true;
+      options.lift(false);
       options.end();
     },
     click(): void {

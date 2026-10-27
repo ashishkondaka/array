@@ -24,9 +24,12 @@ const Bubbles = createSimpleContext({
     const [state, setState] = createStore<{
       snapshot: BubblesSnapshot;
       issues: Record<string, BubbleAttachIssue | undefined>;
+      /** The app a dragged orb would attach to on release, while it rests over its window. */
+      hints: Record<string, string | undefined>;
     }>({
       snapshot: { bubbles: [], hidden: false, characters: [], nudges: true },
       issues: {},
+      hints: {},
     });
     const local = () => activeServerId() === LOCAL_SERVER_ID;
 
@@ -46,9 +49,15 @@ const Bubbles = createSimpleContext({
         .list()
         .then(apply)
         .catch(() => undefined);
+      const unsubscribeHint = port.onAttachHint(({ agentId, app }) =>
+        setState((draft) => {
+          draft.hints[agentId] = app ?? undefined;
+        }),
+      );
       return () => {
         unsubscribe();
         unsubscribeStatus();
+        unsubscribeHint();
       };
     });
 
@@ -70,6 +79,7 @@ const Bubbles = createSimpleContext({
       characterOf,
       nudges: () => state.snapshot.nudges,
       issueOf: (agentId: string) => state.issues[agentId] ?? null,
+      hintOf: (agentId: string) => state.hints[agentId] ?? null,
       dismissIssue: (agentId: string) =>
         setState((draft) => {
           draft.issues[agentId] = undefined;

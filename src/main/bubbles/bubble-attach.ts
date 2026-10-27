@@ -68,10 +68,15 @@ export class BubbleAttachController {
   readonly #options: BubbleAttachOptions;
   #follow: ReturnType<typeof setInterval> | null = null;
 
+  /** The window each dragged bubble rests over, which a release attaches it to. */
+  readonly #armed = new Map<string, DesktopWindow>();
+
   constructor(options: BubbleAttachOptions) {
     this.#options = options;
-    options.bubbles.setDropHandler((agentId, pointer) => {
-      void Effect.runPromise(this.#drop(agentId, pointer));
+    options.bubbles.setAttachHandler({
+      dwell: (agentId, pointer) => void Effect.runPromise(this.#dwell(agentId, pointer)),
+      disarm: (agentId) => this.#disarm(agentId),
+      release: (agentId) => this.#release(agentId),
     });
     setAttachedWindowSource((agentId) => options.bubbles.bubble(agentId)?.attached ?? null);
     this.#syncFollow();
@@ -110,45 +115,56 @@ export class BubbleAttachController {
     );
   }
 
-  #drop(agentId: string, pointer: { x: number; y: number }): Effect.Effect<void> {
+  /** The pointer rested mid-drag: find the window under it and arm the attach, with a hint. */
+  #dwell(agentId: string, pointer: { x: number; y: number }): Effect.Effect<void> {
     return Effect.gen({ self: this }, function* () {
-      const bubble = this.#options.bubbles.bubble(agentId);
-      if (!bubble || bubble.expanded) return;
       if (!this.#options.driverReady()) {
-        // Without the driver there is no window list. An attached bubble moved off its window by hand
-        // still detaches; a free one is only told what to turn on.
-        if (bubble.attached) this.detach(agentId);
+        // Without the driver there is no window list. The bubble says what to turn on when opened.
         this.#options.reportIssue(agentId, attachIssue(this.#options.driverState()));
         return;
       }
       const windows = yield* this.#windows();
       const target = dropTarget(windows, pointer, this.#options.ownPid, this.#options.bubbleWindowIds());
-      const outcome = dropOutcome(bubble, target);
-      this.#options.reportIssue(agentId, null);
-      if (outcome.kind === "detach") {
-        this.detach(agentId);
-        return;
-      }
-      if (outcome.kind === "none") return;
-      const window = outcome.kind === "attach" ? outcome.window : target;
-      if (!window) return;
-      const browserUrl =
-        outcome.kind === "attach" ? yield* this.#browserAddress(window) : (bubble.attached?.browserUrl ?? null);
+      if (!target) return;
+      this.#armed.set(agentId, target);
+      this.#options.bubbles.sendAttachHint(agentId, target.appName || null);
+    }).pipe(Effect.catch((error) => Effect.sync(() => logger.warn("Could not read the windows:", toLogValue(error)))));
+  }
+
+  #disarm(agentId: string): void {
+    if (this.#armed.delete(agentId)) this.#options.bubbles.sendAttachHint(agentId, null);
+  }
+
+  /**
+   * The drag ended. Armed over a window: attach to it (or stay attached) and snap to its corner.
+   * Not armed: a free placement, so an attached bubble that was dragged away detaches where it was let go.
+   */
+  #release(agentId: string): boolean {
+    const armed = this.#armed.get(agentId) ?? null;
+    this.#disarm(agentId);
+    const bubble = this.#options.bubbles.bubble(agentId);
+    if (!bubble) return false;
+    const outcome = dropOutcome(bubble, armed);
+    if (outcome.kind === "detach") this.detach(agentId);
+    if (outcome.kind === "detach" || outcome.kind === "none" || !armed) return false;
+    this.#options.reportIssue(agentId, null);
+    void Effect.runPromise(this.#attach(agentId, armed, outcome.kind === "attach"));
+    return true;
+  }
+
+  #attach(agentId: string, window: DesktopWindow, fresh: boolean): Effect.Effect<void> {
+    return Effect.gen({ self: this }, function* () {
+      const bubble = this.#options.bubbles.bubble(agentId);
+      if (!bubble) return;
+      const browserUrl = fresh ? yield* this.#browserAddress(window) : (bubble.attached?.browserUrl ?? null);
       const others = this.#options.bubbles.snapshot().bubbles.filter((other) => other.agentId !== agentId);
       this.#options.bubbles.replace(agentId, (current) => ({
         ...current,
-        attached: outcome.kind === "attach" ? attachedSurface(window, Date.now(), browserUrl) : current.attached,
+        attached: fresh ? attachedSurface(window, Date.now(), browserUrl) : current.attached,
         ...separateOrb(snappedPosition(window.bounds), others),
       }));
       this.#syncFollow();
-    }).pipe(
-      Effect.catch((error) =>
-        Effect.sync(() => {
-          logger.warn("Could not read the window under a dropped bubble:", toLogValue(error));
-          this.#options.reportIssue(agentId, "driver-unavailable");
-        }),
-      ),
-    );
+    });
   }
 
   /** The page address of a known browser, or null. A failed read only loses the browser offer. */

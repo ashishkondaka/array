@@ -105,3 +105,50 @@ The user asked for Apple design elements such as Liquid Glass and added
 - Expand "materializes" from the orb corner (blur + scale + opacity together); the orb grows in.
 - `prefers-reduced-motion` → short fades, no pulse; `prefers-reduced-transparency` → solid, no
   blur; `prefers-contrast: more` → strong rims. Only palette tokens (`color-mix`), so `check:ui` passes.
+
+## Phase 3: drag-to-attach, plus characters, motion and chats (`bubbles/phase-3-attach`)
+
+User requests folded into this phase: characters picked in the main app, an orb that moves on its
+own and nudges, 120 Hz motion, free-form dragging, and plain chats beside agents.
+
+Works (unit-tested, type-checked; live where noted):
+
+- Orb centred in its window, avatar sized to the orb (checked by screenshot).
+- Characters: eight original characters (Pip, Pebble, Nimbus, Hexa, Bean, Spark, Cubby, Rosie), each
+  a body shape and colour of the avatar engine with the agent's own face. Picked per agent from the
+  sidebar menu "Bubble character"; kept in `openbot-bubbles-v1.json` (`characters`), so a choice
+  survives "Bring back". Older files load with no characters.
+- Motion: the avatar animates only while working, waiting or moving (otherwise it rests, which keeps
+  idle CPU down). A resting orb hops every 25–55 s (squash and stretch). On a new reply or a question
+  the orb springs to the pointer, wiggles, and springs home after 3.5 s; once a minute at most, not
+  when expanded, attached or hidden; off under reduced motion; tray toggle "Let bubbles nudge me".
+- 120 Hz: main moves the orb once per display frame (`displayFrequency`, 8.3 ms on ProMotion) on a
+  critically damped spring advanced by real elapsed time. Renderer motion animates only `transform`
+  and `opacity` (compositor, display rate). A moving orb's avatar draws at 120 fps, a resting one at
+  the shared 30 fps cap. Drag moves coalesce per animation frame.
+- Free-form drag: a drop is a placement anywhere, with no snapping. The orb lifts while carried. A
+  fast release is a throw: Apple's momentum projection (deceleration 0.995) picks the landing point,
+  kept on the display, and the spring starts at the release velocity.
+- Attach is deliberate: rest the orb over another app's window for 0.6 s mid-drag; it arms (accent
+  glow, tooltip "Release to attach to <App>"); releasing then attaches and snaps to the window's
+  top-right corner. Moving on disarms. Dragging an attached orb away and releasing detaches it.
+  While attached the orb follows its window (2 s poll, only while something is attached) and
+  detaches when the window closes. Detach button in the panel header.
+- Each turn of an attached agent starts with an `<openbot_attached_window>` block (app, title,
+  pid, window_id, bounds, "call get_window_state first, act only in this window"); Claude's history
+  view hides it like the memory block. Provider-agnostic, in `drain-scheduler.ts`.
+- Browser windows (Chrome, Edge, Brave, Arc, Safari, Firefox): the address bar is read from the
+  accessibility tree; the bubble offers "Open in OpenBot browser", which opens the page in the
+  embedded browser as the agent's tab.
+- Without Computer Use grants, resting over a window records an issue; the bubble shows the fix
+  ("Open Settings" opens the macOS pane) when you open it. A drag never opens the panel.
+- Plain chats: "New chat" in the sidebar "+" menu creates an agent with the "Chat" role badge,
+  workspace-only access, no Computer Use, and instructions to answer directly. It uses any model the
+  header picker offers (local Ollama / LM Studio models through the custom-endpoint path) and can
+  pop out as a bubble. Decision (user): chats are tool-less agents, no database migration.
+
+Not verified live yet: attaching to a real window (needs Screen Recording and Accessibility for the
+dev Electron binary), the throw and dwell by hand, nudges on a real reply.
+Known limits: a provider CLI keeps its own built-in tools; a chat is told not to use them, and its
+file access is limited to its own folder. Computer Use is not turned on for a turn if the agent has
+it off; the bubble does not override the agent's setting.

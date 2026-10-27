@@ -57,3 +57,23 @@ New files: `packages/contracts/src/ipc-bubbles.ts`, `packages/i18n/src/messages/
 | --- | --- |
 | `src/main/renderer-forwarders.ts` | a notification click about a local agent with a bubble reveals the bubble |
 | `packages/ui/package.json` | `./features/bubbles/BubbleNotice` export |
+
+## Phase 3: attach, characters, motion, chats
+
+New files: `src/main/bubbles/attach-target.ts`, `bubble-attach.ts`, `bubble-attach-wiring.ts`,
+`bubble-motion.ts`, `src/backend/bubbles/attached-window-context.ts`,
+`packages/ui/src/features/bubbles/bubble-characters.ts`, `BubbleNotice.tsx`,
+`packages/ui/src/features/sidebar/SidebarBubbleCharacterSubmenu.tsx`,
+`src/renderer/src/features/chats/new-chat.ts`.
+
+| File | Hook |
+| --- | --- |
+| `src/backend/agent/drain-scheduler.ts` | `inputForThread` = `withAttachedWindow(agent.id, …)` |
+| `src/backend/agent/developer-instructions.ts` | `isTurnContextBlock` knows `<openbot_attached_window>` |
+| `src/main/cua-driver-daemon-client.ts` | read-only `windowState(pid, windowId, query)` |
+| `src/main/index.ts` | build `BubbleAttachController` with the services; teardown |
+| `packages/ui/src/features/agents/AgentAvatar.tsx` | optional `fps` prop (a moving orb draws at 120 fps) |
+| `packages/ui/src/features/sidebar/SidebarAgentContextMenu.tsx` | "Bubble character" submenu |
+| `packages/ui/src/features/sidebar/SidebarTopbar.tsx` | "New chat" item |
+| `packages/ui/src/features/sidebar/sidebar-types.ts` | `bubbleCharacterOf`, `onChooseBubbleCharacter`, `onCreateChat` |
+| `src/renderer/src/features/sidebar/WorkspaceSidebar.tsx` | wire characters and New chat |

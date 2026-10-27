@@ -97,6 +97,8 @@ export interface SidebarProps {
   /** Whether this server currently accepts new agents. Desktop keeps the default enabled. */
   createSupported?: boolean | undefined;
   onCreateAgent: () => void;
+  /** bubbles: starts a plain chat, an agent made to talk rather than act. Without it, no "New chat" item. */
+  onCreateChat?: (() => void) | undefined;
   onEditAgent: (agentId: string) => void;
   duplicateSupported?: boolean | undefined;
   duplicatingAgentIds?: ReadonlySet<string> | undefined;
