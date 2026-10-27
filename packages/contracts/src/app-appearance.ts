@@ -14,10 +14,12 @@ export type AppAppearance = (typeof APP_APPEARANCES)[number];
 export const DEFAULT_APP_APPEARANCE: AppAppearance = "dark";
 
 /**
- * bubbles: on in Array, which is glass by design. Only macOS can blur what is behind it; main
+ * Off: the window is opaque and the page draws Array's glass itself (`array-glass.css`). A transparent
+ * window leaves stale pixels where it is translucent and shows the apps behind it while it is
+ * inactive, so the blurred desktop is an opt-in. Only macOS can blur what is behind the window; main
  * reports `false` elsewhere. A choice saved in Settings still wins.
  */
-export const DEFAULT_TRANSPARENT_WINDOW = true;
+export const DEFAULT_TRANSPARENT_WINDOW = false;
 
 /** The preference as it is stored and as it crosses IPC. */
 export interface AppAppearancePreference {

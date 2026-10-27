@@ -191,8 +191,15 @@ A known browser's address bar is read with a small `get_window_state` query, and
 ### Name and glass
 
 The fork is named Array (`fork-identity.ts`, `package.json`, `electron-builder.yml`,
-`bubbles-dev-name.ts` for dev). The transparent window is on by default, and `array-glass.css` uses
-Liquid Glass the way Apple does: glass for the navigation layer only. The chat is a solid card; the
-rail and top row are the macOS blur (`under-window` vibrancy) with a thin tint; the sidebar is an
-inset, rounded glass pane over that blur; the composer is a glass slab over the chat. No translucent
-layer sits on another translucent layer.
+`bubbles-dev-name.ts` for dev). The window is opaque and `array-glass.css` draws the glass itself.
+Electron cannot use macOS's Liquid Glass (`NSGlassEffectView`); its only material is the older
+`vibrancy` blur, and that needs a transparent window, which has two faults: the compositor leaves
+stale pixels wherever the window is translucent (ghost text after a resize or a title change), and
+macOS 26+ stops the blur while the window is inactive, so the apps behind show through. On the
+opaque window neither can happen. Glass goes where it floats over the app's own content, as in
+Apple's apps: the composer over the chat (`backdrop-filter`), menus and dialogs over the page, the
+bubble panels. The navigation layer is a material with depth: the sidebar is an inset, rounded pane
+on the darker frame with a white rim on its top edge, and the chat is a solid card beside it. The
+blurred desktop stays as "Transparent window" in Settings (`DEFAULT_TRANSPARENT_WINDOW` is off);
+there the frame and the pane are 72 % and 84 % tints, and the two chat windows are created with
+`visualEffectState: "active"` so the blur stays live while the window is inactive.

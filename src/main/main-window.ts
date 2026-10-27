@@ -173,7 +173,12 @@ export function createMainWindowController({
       // the full-bleed browser header alike, and y 13 puts its centre line within half a pixel of
       // both of those rows. The setup window below uses the same offsets.
       ...(process.platform === "darwin"
-        ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 12, y: 13 } }
+        ? {
+            titleBarStyle: "hidden" as const,
+            trafficLightPosition: { x: 12, y: 13 },
+            // bubbles: the glass window keeps its blur while inactive; macOS otherwise shows the apps behind it.
+            visualEffectState: "active" as const,
+          }
         : {}),
       webPreferences: {
         preload: join(__dirname, "../preload/index.cjs"),
@@ -276,7 +281,12 @@ export function createMainWindowController({
       title: getTranslate()("window.localHostTitle"),
       icon: appIconPath,
       ...(process.platform === "darwin"
-        ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 12, y: 13 } }
+        ? {
+            titleBarStyle: "hidden" as const,
+            trafficLightPosition: { x: 12, y: 13 },
+            // bubbles: the glass window keeps its blur while inactive; macOS otherwise shows the apps behind it.
+            visualEffectState: "active" as const,
+          }
         : {}),
       webPreferences: {
         preload: join(__dirname, "../preload/index.cjs"),

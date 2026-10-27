@@ -275,6 +275,21 @@ The DMG was rebuilt with the glass rework: `verify:package` passes (launch inclu
 signature verifies deep and strict, and the packaged stylesheet holds the new `--array-glass-*`
 rules with the reduced-transparency fallback. Still not done by hand: the first "Open Anyway".
 
+Opaque window (user report: ghost text and flicker, apps showing through; user chose the opaque
+window over a native Liquid Glass addon). Diagnosis: the renderer's own frame (CDP
+`Page.captureScreenshot`) had no ghost, so the doubled header text was stale paint left by the
+window compositor in the translucent parts of the transparent window; the apps showing through were
+macOS 27 stopping the blur while the window was inactive (Electron's default `visualEffectState`,
+`followWindow`) under tints of 28 % and 52 %. Electron 44 has no Liquid Glass API (`electron.d.ts`
+has no glass; only `vibrancy`), and a native `NSGlassEffectView` addon would keep the transparent
+window, so it would keep the ghosting, and could only glass the chrome against the desktop, never a
+toolbar over the chat. Now `DEFAULT_TRANSPARENT_WINDOW` is off, `array-glass.css` draws the pane,
+the card and the glass composer, menus and dialogs on the opaque window, and the transparent window
+is an opt-in with 72 % / 84 % tints and `visualEffectState: "active"`. A dev-profile preference saved
+while the default was on still said `true`; it was set to `false` by hand. Note for dev: a main-process
+edit restarts Electron, and `dev-services` then stops the whole stack ("stopped with code 0"), so
+`bun run dev` has to be started again.
+
 ## Status against the definition of done
 
 | Item | State |

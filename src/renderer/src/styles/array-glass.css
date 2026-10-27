@@ -1,77 +1,66 @@
-/* Array (OpenBot Bubbles fork): Liquid Glass, as Apple uses it.
+/* Array (OpenBot Bubbles fork): Liquid Glass, drawn by the page.
  *
- * Glass is for the navigation layer, never for content. The chat is a solid card, so text always
- * reads as on an opaque window. The window chrome (rail and top row) is the macOS blur behind the
- * window with a thin tint. The sidebar floats over that blur as an inset, rounded glass pane with a
- * light rim, and the composer floats over the chat as a glass slab that blurs the messages scrolling
- * under it. Glass never sits on glass: each translucent layer has a solid or native layer behind it,
- * not another tint. Only palette tokens are used, so light and dark follow the theme. Reduced
- * transparency makes every layer solid. */
+ * The window is opaque. A transparent Electron window leaves stale pixels wherever it is
+ * translucent (the compositor does not clear them), and macOS stops its blur while the window is
+ * inactive, so the apps behind showed through: both are impossible on an opaque window. Glass is for
+ * the layers that float over the app's own content, where Apple uses it: the composer over the chat,
+ * menus and dialogs over the page, the bubble panels. The navigation layer is a material with depth:
+ * the sidebar is an inset, rounded pane that floats on the darker frame with a light rim on its top
+ * edge, and the chat is a solid card beside it. Only palette tokens are used, so light and dark
+ * follow the theme. The blurred desktop ("Transparent window" in Settings) is an opt-in at the end of
+ * this file; reduced transparency makes every layer solid. */
 
-:root[data-openbot-window-glass] {
-  /* The chrome: the native blur shows through a thin tint. */
-  --window-glass-frame: color-mix(in oklab, var(--openbot-bg-frame) 28%, transparent);
-  /* The content card is solid. */
-  --window-glass-card: var(--openbot-bg-canvas);
-  --array-glass-pane: color-mix(in oklab, var(--openbot-bg-sidebar) 52%, transparent);
+.app-window,
+.ui-action-menu,
+.ui-dialog-content {
+  /* Light catches the top edge of glass: the palette's highlight, bright in both themes. */
+  --array-glass-rim: var(--openbot-glass-highlight);
+  --array-glass-rim-soft: var(--openbot-border-strong);
   --array-glass-surface: color-mix(in oklab, var(--openbot-bg-surface) 74%, transparent);
-  --array-glass-rim: color-mix(in oklab, var(--openbot-text-primary) 20%, transparent);
-  --array-glass-rim-soft: color-mix(in oklab, var(--openbot-text-primary) 8%, transparent);
+  --array-glass-sheet: color-mix(in oklab, var(--openbot-bg-sheet) 86%, transparent);
   --array-glass-blur: var(--openbot-space-6);
   /* The gap between the floating sidebar and the window edge or the card. */
   --array-glass-gap: var(--openbot-space-1-5);
+  /* The sidebar pane: solid on the opaque window, a tint over the blur on the transparent one. */
+  --array-glass-pane: var(--openbot-bg-sidebar);
 }
 
 @media (min-width: 721px) {
-  /* On the agents page the card holds the chat only, so the sidebar floats over the blur beside it. */
-  :root[data-openbot-window-glass] .app-window > .app-frame-edge[data-window-page-kind="agents"]::before {
+  /* On the agents page the card holds the chat only, so the sidebar floats on the frame beside it. */
+  .app-window > .app-frame-edge[data-window-page-kind="agents"]::before {
     left: calc(var(--left-panel-width) + var(--array-glass-gap));
-    box-shadow: 0 0 0 1px var(--array-glass-rim-soft);
   }
 
-  :root[data-openbot-window-glass]
-    .app-window
-    > .app-frame-edge.app-frame-with-server-rail[data-window-page-kind="agents"]::before {
+  .app-window > .app-frame-edge.app-frame-with-server-rail[data-window-page-kind="agents"]::before {
     left: calc(var(--server-rail-width) + var(--left-panel-width) + var(--array-glass-gap));
   }
 
-  /* The sidebar: a glass pane inset from the window, with a rim where light catches its top edge. */
-  :root[data-openbot-window-glass] .app-window > .app-frame-edge[data-window-page-kind="agents"] > .sidebar {
+  /* The sidebar: a pane inset from the window, with a rim where light catches its top edge. */
+  .app-window > .app-frame-edge[data-window-page-kind="agents"] > .sidebar {
     margin: var(--array-glass-gap) 0 var(--array-glass-gap) var(--array-glass-gap);
     overflow: hidden;
     border-radius: var(--openbot-radius-xl);
     background: var(--array-glass-pane);
     box-shadow:
       inset 0 1px 0 var(--array-glass-rim),
-      inset 0 0 0 1px var(--array-glass-rim-soft),
+      0 0 0 1px var(--array-glass-rim-soft),
       0 var(--openbot-space-2) var(--openbot-space-6) var(--openbot-shadow-popover-ambient);
   }
 
   /* The pane's own edge replaces the lines that divided the sidebar from the chat. */
-  :root[data-openbot-window-glass] .app-window > .app-frame-edge[data-window-page-kind="agents"] > .sidebar::before,
-  :root[data-openbot-window-glass]
-    .app-window
-    > .app-frame-edge[data-window-page-kind="agents"]
-    > .sidebar
-    .sidebar-topbar::after {
+  .app-window > .app-frame-edge[data-window-page-kind="agents"] > .sidebar::before,
+  .app-window > .app-frame-edge[data-window-page-kind="agents"] > .sidebar .sidebar-topbar::after {
     content: none;
   }
 }
 
-/* The narrow window has no card or rail: the sidebar is the glass pane at full size. */
-@media (max-width: 720px) {
-  :root[data-openbot-window-glass] .app-window .sidebar {
-    background: var(--array-glass-pane);
-  }
-}
-
-/* The search field sits in the sidebar glass as a recessed well. */
-:root[data-openbot-window-glass] .sidebar-search-wrap {
+/* The search field sits in the pane as a recessed well. */
+.app-window .sidebar-search-wrap {
   border-radius: var(--openbot-radius-md);
 }
 
-/* The composer floats over the chat as a glass slab. */
-:root[data-openbot-window-glass] .composer {
+/* The composer floats over the chat as a glass slab that blurs the messages scrolling under it. */
+.app-window .composer {
   border-color: var(--array-glass-rim-soft);
   border-radius: var(--openbot-radius-xl);
   background: var(--array-glass-surface);
@@ -81,10 +70,17 @@
   backdrop-filter: blur(var(--array-glass-blur)) saturate(180%);
 }
 
-/* Menus and dialogs: a thicker glass, so a bigger surface reads as heavier. */
-:root[data-openbot-window-glass] .ui-action-menu,
-:root[data-openbot-window-glass] .ui-dialog-content:not([data-dialog-surface="unstyled"]) {
-  background: color-mix(in oklab, var(--openbot-bg-sheet) 86%, transparent);
+.app-window .composer:focus-within {
+  box-shadow:
+    inset 0 1px 0 var(--array-glass-rim),
+    0 0 0 3px var(--openbot-hover),
+    0 var(--openbot-space-2) var(--openbot-space-6) var(--openbot-shadow-popover-ambient);
+}
+
+/* Menus and dialogs: a thicker glass over the page, so a bigger surface reads as heavier. */
+.ui-action-menu,
+.ui-dialog-content:not([data-dialog-surface="unstyled"]) {
+  background: var(--array-glass-sheet);
   box-shadow:
     inset 0 1px 0 var(--array-glass-rim),
     0 0 0 1px var(--array-glass-rim-soft),
@@ -92,16 +88,40 @@
   backdrop-filter: blur(calc(var(--array-glass-blur) * 1.5)) saturate(180%);
 }
 
+/* The transparent window (an opt-in in Settings): the frame and the pane become tints over the
+ * macOS blur, thick enough that nothing behind the window is legible, and the chat card stays solid.
+ * Main keeps the blur live while the window is inactive (`visualEffectState`). */
+:root[data-openbot-window-glass] {
+  --window-glass-frame: color-mix(in oklab, var(--openbot-bg-frame) 72%, transparent);
+  --window-glass-card: var(--openbot-bg-canvas);
+}
+
+:root[data-openbot-window-glass] .app-window {
+  --array-glass-pane: color-mix(in oklab, var(--openbot-bg-sidebar) 84%, transparent);
+}
+
+/* The narrow window has no card: the sidebar is the pane at full size. */
+@media (max-width: 720px) {
+  :root[data-openbot-window-glass] .app-window .sidebar {
+    background: var(--array-glass-pane);
+  }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   :root[data-openbot-window-glass] {
     --window-glass-frame: var(--openbot-bg-frame);
+  }
+
+  .app-window,
+  :root[data-openbot-window-glass] .app-window {
     --array-glass-pane: var(--openbot-bg-sidebar);
     --array-glass-surface: var(--openbot-bg-surface);
   }
 
-  :root[data-openbot-window-glass] .composer,
-  :root[data-openbot-window-glass] .ui-action-menu,
-  :root[data-openbot-window-glass] .ui-dialog-content {
+  .app-window .composer,
+  .ui-action-menu,
+  .ui-dialog-content {
+    --array-glass-sheet: var(--openbot-bg-sheet);
     backdrop-filter: none;
   }
 }

@@ -88,7 +88,7 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | `src/main/index.ts` | start the local analyst seed after agent init; retry on `status` events |
 | `package.json` | `productName: "Array"`; `postinstall` ends with `bubbles-dev-name.ts` |
 | `electron-builder.yml` | `appId: app.array.desktop`, `productName: Array` |
-| `packages/contracts/src/app-appearance.ts` | `DEFAULT_TRANSPARENT_WINDOW = true` |
+| `packages/contracts/src/app-appearance.ts` | `DEFAULT_TRANSPARENT_WINDOW` (on at first; off since the opaque-window rework, see Phase 5) |
 | `packages/i18n/src/messages/en/window.ts` | native window titles say Array |
 | `src/renderer/src/styles.css` | import `array-glass.css` after `window-glass.css` |
 
@@ -99,3 +99,6 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | `src/renderer/src/features/window/window-page-context.tsx` | `conversationCovered` is also true while a bubble is an orb, so a reply nobody saw stays unread |
 | `electron-builder.yml` | the macOS permission prompts (microphone, screen, Automation) say Array |
 | `scripts/verify-macos-package.ts` | expects the Array microphone prompt |
+| `packages/contracts/src/app-appearance.ts` | `DEFAULT_TRANSPARENT_WINDOW = false`: the window is opaque, the page draws the glass |
+| `src/main/main-window.ts` | the two chat windows pass `visualEffectState: "active"`, so the opt-in glass window keeps its blur while inactive |
+| `src/main/window-appearance.ts` | comment only: why the blur stays live |

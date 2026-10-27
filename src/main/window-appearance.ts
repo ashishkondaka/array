@@ -47,8 +47,9 @@ export function followAppearance(window: BrowserWindow, darkColor: string): void
 /**
  * Keeps the main window opaque or transparent, as the preference says, until the window closes. A
  * transparent window shows the macOS blur; the page then paints a translucent tint over it. The
- * blur keeps Electron's default `visualEffectState`, `followWindow`, so an inactive window stops the
- * live blur. Main applies the saved preference before the window shows.
+ * window is created with `visualEffectState: "active"` (bubbles), so the blur stays live while the
+ * window is inactive: with `followWindow`, macOS 26 and later stop the blur and show the apps behind
+ * the window through the tint. Main applies the saved preference before the window shows.
  */
 export function followWindowGlass(window: BrowserWindow, darkColor: string): void {
   // The window is built opaque. A window opened again while the preference is on takes the blur here.
