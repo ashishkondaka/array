@@ -98,6 +98,11 @@ told about the desktop.
   model server on first run, saves it as a custom endpoint and creates a "Local Analyst" agent that
   runs on it, so nothing leaves the computer. A conversation export script and
   [FINETUNE.md](docs/bubbles/FINETUNE.md) describe how to fine-tune on exported chats.
+- **Apple Intelligence's on-device model.** On macOS 26 and later with Apple Intelligence on, Array
+  serves Apple's built-in language model as a local endpoint ("Apple Intelligence (this Mac)",
+  model `apple-foundation`) and creates an "Apple Analyst" agent on it. Any agent can be switched to
+  that model. It runs entirely on the Mac; it has a small context (about 4 k tokens) and answers in
+  text, without tools.
 
 ### Liquid Glass
 
@@ -208,7 +213,8 @@ listed in [UPSTREAM_TOUCHPOINTS.md](docs/bubbles/UPSTREAM_TOUCHPOINTS.md).
 
 | Path | Owns |
 | --- | --- |
-| `src/main/bubbles/` | Bubble windows, state file, tray, shortcut, motion, attach, go-to-app, Local Analyst seed, fork identity. Pure modules have `*.test.ts` beside them. |
+| `src/main/bubbles/` | Bubble windows, state file, tray, shortcut, motion, attach, go-to-app, Local Analyst seed, the Apple model server's lifecycle, which local models can think, fork identity. Pure modules have `*.test.ts` beside them. |
+| `resources/apple-model-server/main.swift`, `scripts/build-apple-model-server.ts` | The Swift server that puts Apple's on-device model behind OpenAI-compatible routes, and its build. |
 | `src/main/ipc/bubbles-handlers.ts` | The bubbles IPC group (sender-validated). |
 | `src/backend/bubbles/` | What agents are told (attached window, desktop) and the `go_to_app` tool. |
 | `src/renderer/src/features/bubbles/` | `BubbleShell`, the orb, the drag, the attention cues, the window-mode detection. |
@@ -256,7 +262,8 @@ block is static: no window titles are sent to the model until the agent itself a
 - **A locked screen stops the trip.** macOS does not bring another Space's window forward while
   the screen is locked, so `go_to_app` then reports "no window on this screen".
 - **Small local models.** The Local Analyst runs whatever Ollama or LM Studio serves; small models
-  rarely use tools well, so ask a Claude or Codex agent for desktop work.
+  rarely use tools well, so ask a Claude or Codex agent for desktop work. The Apple on-device model
+  is text-only with a small context: an analyst, not a desktop worker.
 - **The sign-in e-mail says OpenBot.** It comes from OpenBot's account service, which Array uses.
 
 ## Documentation

@@ -197,6 +197,24 @@ unknown) so the agent opens it with its own Computer Use `launch_app`; main neve
 or types, so the agent's approval policy still covers every action. The driver does not expose the
 Dock's icons, so the Dock stop is the middle of the strip; it is skipped when the Dock is hidden.
 
+### Apple on-device model
+
+macOS 26 runs Apple Intelligence's language model on the Mac and exposes it to Swift only, through
+FoundationModels. `resources/apple-model-server/main.swift` is a ~300-line server on 127.0.0.1 that
+puts it behind the routes OpenCode's OpenAI-compatible adapter speaks: `GET /v1/models` (one model,
+`apple-foundation`), `POST /v1/chat/completions` (SSE when `stream` is true), `GET /health`. System
+messages become the session's instructions, the rest one prompt; one request runs at a time; tools
+in the request are ignored. `scripts/build-apple-model-server.ts` (`prepare:apple-model-server`, in
+`dist:mac`) compiles it with Xcode's `swiftc` into `build/apple-model-server/darwin/<arch>`, which
+electron-builder ships beside the Computer Use driver; without Swift nothing is built and the app
+runs without it. `src/main/bubbles/apple-model.ts` starts the server at launch (fixed port 48127,
+any port if taken), reads its first line (`{port, available, reason}`), saves or refreshes the
+custom endpoint `apple-intelligence` (the same path a user takes for a local Ollama), registers
+`apple-intelligence/apple-foundation` as a model that cannot think, and seeds an "Apple Analyst"
+agent once OpenCode lists the model. The server exits when the app closes its stdin. On a Mac
+without the model (older macOS, Apple Intelligence off, Intel) the server says so and nothing is
+saved. Limits: about a 4 k-token context, text only, no tool calls.
+
 ### Characters, chats, local analyst
 
 - Characters (`bubble-characters.ts`): eight body shape and colour pairs of the avatar engine,

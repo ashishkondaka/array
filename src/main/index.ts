@@ -32,13 +32,15 @@ import { readAppVariant, resolveAppIconPath, resolveLogoColorIconPath } from "./
 import { type ApplicationServices, createApplicationServices } from "./application-services";
 import { type BackgroundTray, createBackgroundTray } from "./background-tray";
 import {
+  type AppleModelServer,
   type BubbleAttachController,
+  createAppleModelServer,
   createBubbleAttach,
   createLocalAnalystSeed,
   createThinkingCapabilities,
   type LocalAnalystSeed,
   type ThinkingCapabilities,
-} from "./bubbles/bubble-attach-wiring"; // bubbles: attach, local analyst, model capabilities
+} from "./bubbles/bubble-attach-wiring"; // bubbles: attach, local analyst, model capabilities, Apple model
 import { BubbleWindowManager } from "./bubbles/bubble-window-manager"; // bubbles: window manager
 import {
   BUBBLES_APP_ID,
@@ -457,6 +459,7 @@ const bubbles = new BubbleWindowManager({
 let bubbleAttach: BubbleAttachController | null = null;
 let localAnalyst: LocalAnalystSeed | null = null;
 let thinkingCapabilities: ThinkingCapabilities | null = null; // bubbles: which local models cannot think
+let appleModel: AppleModelServer | null = null; // bubbles: the Apple on-device model server
 
 let appIconColorImage: NativeImage | undefined;
 let backgroundTray: BackgroundTray | null = null;
@@ -1196,11 +1199,14 @@ if (!hasSingleInstanceLock) {
       service.on("event", (event) => event.type === "agents-changed" && bubbles.reconcileAgents()); // bubbles: deleted agents
       localAnalyst = createLocalAnalystSeed(built); // bubbles: local analyst seed
       thinkingCapabilities = createThinkingCapabilities(built); // bubbles: which local models cannot think
+      appleModel = createAppleModelServer(built); // bubbles: the Apple on-device model
+      teardown.push(0, "apple model server", () => appleModel?.stop()); // bubbles: the server exits with the app
       service.on("event", (event) => {
         if (event.type !== "status") return;
-        // bubbles: the model catalogue changed: the seeded model may have arrived, and an endpoint may be new.
+        // bubbles: the model catalogue changed: a seeded model may have arrived, and an endpoint may be new.
         void Effect.runPromise(thinkingCapabilities?.refresh() ?? Effect.void);
         void Effect.runPromise(localAnalyst?.tryCreate() ?? Effect.void);
+        void Effect.runPromise(appleModel?.tryCreate() ?? Effect.void);
       });
       // A routine or its owner can be deleted outside the events API. Its route is then revoked here.
       // Turns and channel messages also send these events, so only a deleted owner starts a sync.
@@ -1428,6 +1434,7 @@ if (!hasSingleInstanceLock) {
         .then(() => Effect.runPromise(bubbles.restore())) // bubbles: reopen saved bubbles once agents exist
         .then(() => Effect.runPromise(thinkingCapabilities?.refresh() ?? Effect.void)) // bubbles: before the first turn
         .then(() => Effect.runPromise(localAnalyst?.start() ?? Effect.void)) // bubbles: local analyst seed
+        .then(() => Effect.runPromise(appleModel?.start() ?? Effect.void)) // bubbles: the Apple on-device model
         .catch((error) => {
           logger.error("Unable to initialize the local agent backend:", toLogValue(error));
         });

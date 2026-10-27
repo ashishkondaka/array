@@ -1,18 +1,43 @@
 // Builds the fork's service-backed parts from the application services: drag-to-attach (the Computer
 // Use driver for the window list, the embedded browser for the handoff) and the local analyst seed.
 
+import { resolve } from "node:path";
 import { app } from "electron";
 import type { ApplicationServices } from "../application-services";
 import { CuaDriverDaemonClient } from "../cua-driver-daemon-client";
 import { computerUseDesktopPoint, computerUseDesktopRect } from "../main-window";
 import { probeModels } from "../model-server-probe";
+import { AppleModelServer, appleModelBinaryPath } from "./apple-model";
 import { BubbleAttachController } from "./bubble-attach";
 import type { BubbleWindowManager } from "./bubble-window-manager";
 
 import { LocalAnalystSeed } from "./local-analyst";
 import { ThinkingCapabilities } from "./thinking-capabilities";
 
-export type { BubbleAttachController, LocalAnalystSeed, ThinkingCapabilities };
+export type { AppleModelServer, BubbleAttachController, LocalAnalystSeed, ThinkingCapabilities };
+
+/** The Apple on-device model: its server, its endpoint and its seed agent (macOS 26 and later). */
+export function createAppleModelServer(
+  services: Pick<ApplicationServices, "customProviderChanges" | "service">,
+): AppleModelServer {
+  const { customProviderChanges, service } = services;
+  return new AppleModelServer({
+    userDataPath: app.getPath("userData"),
+    binaryPath: appleModelBinaryPath({
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
+      // The bundled main runs from `out/main`, two levels below the checkout, as the driver lookup assumes.
+      sourceRoot: resolve(__dirname, "../.."),
+      platform: process.platform,
+      architecture: process.arch,
+    }),
+    savedEndpoints: () => customProviderChanges.list(),
+    saveEndpoint: (input) => customProviderChanges.save(input),
+    updateEndpoint: (input) => customProviderChanges.update(input),
+    catalogue: () => service.listModels(),
+    createAgent: (input) => service.createAgent(input),
+  });
+}
 
 /** Reads, from the local servers, which custom models cannot think, so no thinking level reaches them. */
 export function createThinkingCapabilities(

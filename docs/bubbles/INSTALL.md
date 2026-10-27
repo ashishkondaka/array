@@ -9,7 +9,9 @@ share it for noncommercial purposes only.
   Intel Macs.
 - At least one agent CLI, installed and logged in: Codex, Claude Code, Grok, Cursor, or OpenCode.
   Array runs agents through these; it has no model of its own. A local model through Ollama or LM
-  Studio also works with OpenCode installed: Array finds it and adds a "Local Analyst" agent.
+  Studio also works with OpenCode installed: Array finds it and adds a "Local Analyst" agent. On
+  macOS 26 or later with Apple Intelligence turned on, Array also serves Apple's built-in on-device
+  model and adds an "Apple Analyst" agent on it (OpenCode installed; nothing leaves the Mac).
 - An OpenBot account. Array signs in through OpenBot's account service (`api.openbot.run`), as
   OpenBot does.
 

@@ -67,3 +67,6 @@ keys
 
 # Persistent local development identity and migration recovery.
 .openbot/
+
+# bubbles: the Apple on-device model server, built by prepare:apple-model-server
+/build/apple-model-server/

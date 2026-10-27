@@ -115,6 +115,8 @@ mac:
       to: remote-desktop-runtime
     - from: build/cua-driver/darwin/${arch}
       to: cua-driver/darwin/${arch}
+    - from: build/apple-model-server/darwin/${arch} # bubbles: the Apple on-device model server (macOS 26+)
+      to: apple-model-server/darwin/${arch}
   # The Computer Use driver arrives signed by Cua AI with the hardened runtime, a secure timestamp
   # and `com.apple.security.automation.apple-events`. Re-signing it with OpenBot's inherited
   # entitlements would drop that entitlement and break the driver's Automation route, so its own

@@ -81,7 +81,7 @@ export class ThinkingCapabilities {
         }
       }
       const without = modelsWithoutThinking(entries);
-      setModelsWithoutThinking(without);
+      setModelsWithoutThinking("ollama", without);
       if (entries.length > 0) {
         logger.info("Read the thinking capability of the local models.", {
           models: entries.length,

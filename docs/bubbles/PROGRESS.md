@@ -361,7 +361,21 @@ contract has no "off") through `applyConfig`, so every Local Analyst turn carrie
 `provider/model` ids that cannot think; `applyConfig` skips the thinking level for them. Read before
 the first turn and on each catalogue change; an endpoint that is not Ollama says nothing and keeps
 OpenBot's behaviour. Unit tests: `thinking-capabilities.test.ts`. Seen in the dev log:
-`Read the thinking capability of the local models {"models":1,"withoutThinking":1}`.
+`Read the thinking capability of the local models {"models":1,"withoutThinking":1}`. A session
+that had kept a level from before still failed once the skip was in, so the hook sets the session's
+own "default" level (OpenCode lists `low … max, default`, checked over ACP) instead of skipping.
+Live after that: "Say hello in five words." → "Hello, how can I help you?", turn completed (14.6 s,
+the model's cold load). The registry is per source (`ollama`, `apple`), so one refresh does not
+drop another's models.
+
+Apple on-device model (user request). A Swift probe on this Mac (macOS 27.0.1) showed
+`SystemLanguageModel.default` available and answering ("Paris"). Built
+`resources/apple-model-server/main.swift` (OpenAI-compatible routes over NWListener on 127.0.0.1;
+checked with curl: `/health`, `/v1/models`, a chat completion "Tokyo is the capital of Japan.", an
+SSE stream "1, 2, …"), `scripts/build-apple-model-server.ts` (in `dist:mac`, shipped as a resource
+beside the driver, skipped without Swift), and `src/main/bubbles/apple-model.ts` (server lifecycle,
+the `apple-intelligence` endpoint saved or refreshed to the port, the model registered as unable to
+think, the "Apple Analyst" seed). Unit tests: `apple-model.test.ts`.
 
 ## Status against the definition of done
 

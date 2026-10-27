@@ -116,4 +116,5 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | `src/main/cua-driver-daemon-client.ts` | `listApps()` (the driver's `list_apps`), beside `windowState()` |
 | `README.md` | Array's own README; upstream's moved unchanged to `docs/OPENBOT_README.md` |
 | `src/backend/acp-configuration.ts` | `applyConfig` sends no thinking level to a model in `model-thinking.ts`'s registry (Ollama says it cannot think) |
-| `src/main/index.ts` | `createThinkingCapabilities`: refreshed before the first turn and on each model catalogue change |
+| `src/main/index.ts` | `createThinkingCapabilities`: refreshed before the first turn and on each model catalogue change; `createAppleModelServer`: started after it, stopped in teardown, `tryCreate` on each catalogue change |
+| `package.json`, `electron-builder.yml`, `.gitignore` | `prepare:apple-model-server` in `dist:mac`; `build/apple-model-server/darwin/${arch}` shipped as a resource; the build output ignored |
