@@ -2,6 +2,7 @@
 // fork). Main owns the attachment and sets the source; the drain scheduler asks for the block.
 
 import type { AttachedSurface } from "@openbot/contracts/ipc";
+import { desktopWorkerBlock, GO_TO_APP_TOOL, hasFreeBubble } from "./desktop-worker";
 
 export const ATTACHED_WINDOW_BLOCK_START = "<openbot_attached_window>";
 const ATTACHED_WINDOW_BLOCK_END = "</openbot_attached_window>";
@@ -30,7 +31,8 @@ export function attachedWindowBlock(surface: AttachedSurface): string {
     "A screenshot of this window is available. Before you answer about it or act in it, call the",
     `computer_use tool get_window_state with pid ${surface.pid} and window_id ${surface.windowId}; it returns`,
     "the screenshot and the accessibility tree. Act only in this window, with Computer Use tools",
-    "scoped to this pid and window_id. Do not move to other windows or apps unless the user asks.",
+    "scoped to this pid and window_id. Do not move to other windows or apps unless the user asks; when",
+    `they ask about another app, call the OpenBot tool ${GO_TO_APP_TOOL} with its name and your bubble moves there.`,
     "Work in the background: the user keeps using their screen while you act. Use element actions",
     "(element_token from get_window_state) and type_text with the default background delivery. Do not",
     "call bring_to_front or launch_app, and use delivery_mode foreground only when a fresh snapshot shows",
@@ -51,11 +53,15 @@ export function attachedWindowBlock(surface: AttachedSurface): string {
   return lines.join("\n");
 }
 
-/** The turn input with the attached-window block first, as a block of its own, or unchanged. */
+/**
+ * The turn input with the attached-window block first, as a block of its own; a free bubble gets
+ * the desktop block instead (`desktop-worker.ts`); an agent with no bubble gets the input unchanged.
+ */
 export function withAttachedWindow<Item extends { type: string }>(
   agentId: string,
   input: Item[],
 ): (Item | { type: "text"; text: string })[] {
   const surface = source(agentId);
-  return surface ? [{ type: "text", text: attachedWindowBlock(surface) }, ...input] : input;
+  if (surface) return [{ type: "text", text: attachedWindowBlock(surface) }, ...input];
+  return hasFreeBubble(agentId) ? [{ type: "text", text: desktopWorkerBlock() }, ...input] : input;
 }

@@ -14,15 +14,19 @@ import {
 import { createOpenBotLogger, toLogValue } from "@openbot/logging";
 import { Effect } from "effect";
 import { setAttachedWindowSource } from "../../backend/bubbles/attached-window-context";
+import { type GoToAppResult, setDesktopWorkerHost } from "../../backend/bubbles/desktop-worker";
 import {
+  appWindow,
   attachedSurface,
   type DesktopWindow,
   dropOutcome,
   dropTarget,
+  findApp,
   followAttachment,
   frontWindow,
   isKnownBrowser,
   readBrowserAddress,
+  readDesktopApps,
   readDesktopWindows,
   snappedPosition,
 } from "./attach-target";
@@ -39,7 +43,11 @@ const ATTACHED_WIDTH_DELTA = BUBBLE_LIMITS.attachedOrbWidth - BUBBLE_LIMITS.orbS
 export interface WindowReads {
   listWindows: () => Effect.Effect<unknown, unknown>;
   windowState: (pid: number, windowId: number, query: string) => Effect.Effect<unknown, unknown>;
+  listApps: () => Effect.Effect<unknown, unknown>;
 }
+
+/** A trip to an app's window ends by itself when a drag or a close cuts it short. */
+const JOURNEY_TIMEOUT_MS = 6_000;
 
 export interface BubbleAttachOptions {
   bubbles: BubbleWindowManager;
@@ -99,6 +107,14 @@ export class BubbleAttachController {
       release: (agentId, attach, pointer) => this.#release(agentId, attach, pointer),
     });
     setAttachedWindowSource((agentId) => options.bubbles.bubble(agentId)?.attached ?? null);
+    // The agent's `go_to_app` tool, and whether its turn gets the desktop block.
+    setDesktopWorkerHost({
+      goToApp: (agentId, app) => this.goToApp(agentId, app),
+      freeBubble: (agentId) => {
+        const bubble = options.bubbles.bubble(agentId);
+        return bubble !== null && bubble.attached === null;
+      },
+    });
     options.bubbles.setFrontWindowSource(() =>
       options.driverReady()
         ? Effect.runPromise(
@@ -134,6 +150,74 @@ export class BubbleAttachController {
     if (this.#workTick) clearInterval(this.#workTick);
     this.#follow = null;
     this.#workTick = null;
+  }
+
+  /**
+   * The agent sends its bubble to an app: the orb flies by the Dock to the app's front window and
+   * attaches there, and the agent is told the window. An app with no window on screen is reported,
+   * running or not, so the agent can open one with its own Computer Use tools; nothing is launched
+   * here. The answer never fails: each reason is a result the agent can read and act on.
+   */
+  goToApp(agentId: string, app: string): Effect.Effect<GoToAppResult> {
+    return Effect.gen({ self: this }, function* () {
+      if (!this.#options.bubbles.bubble(agentId)) return { status: "no-bubble" } as const;
+      if (!this.#options.driverReady()) {
+        const issue = attachIssue(this.#options.driverState());
+        this.#options.reportIssue(agentId, issue);
+        return { status: "driver-unavailable", reason: issue } as const;
+      }
+      const windows = yield* this.#windows();
+      const window = appWindow(windows, app, this.#options.ownPid, this.#options.bubbleWindowIds());
+      if (!window) {
+        const found = findApp(readDesktopApps(yield* this.#options.reads.listApps()), app);
+        if (!found) return { status: "unknown-app", app } as const;
+        return found.running
+          ? ({ status: "no-window", app: found.name, pid: found.pid, bundleId: found.bundleId } as const)
+          : ({
+              status: "not-running",
+              app: found.name,
+              bundleId: found.bundleId,
+              launchPath: found.launchPath,
+            } as const);
+      }
+      this.#options.reportIssue(agentId, null);
+      yield* this.#travelTo(agentId, window);
+      if (!this.#options.bubbles.bubble(agentId)) return { status: "no-bubble" } as const;
+      yield* this.#attach(agentId, window, true);
+      return {
+        status: "attached",
+        app: window.appName,
+        title: window.title,
+        pid: window.pid,
+        windowId: window.windowId,
+        bounds: { ...window.bounds },
+        browserUrl: this.#options.bubbles.bubble(agentId)?.attached?.browserUrl ?? null,
+      } as const;
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.sync(() => {
+          logger.warn("Could not send a bubble to an app:", toLogValue(error));
+          return { status: "failed", message: String(toLogValue(error)) } as const;
+        }),
+      ),
+    );
+  }
+
+  /** The orb's trip: by the Dock (where the app's icon is), then onto the window's corner. */
+  #travelTo(agentId: string, window: DesktopWindow): Effect.Effect<void> {
+    const corner = snappedPosition(window.bounds);
+    const dock = this.#options.bubbles.dockStopNear(corner);
+    const stops = dock ? [dock, corner] : [corner];
+    return Effect.promise(
+      () =>
+        new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, JOURNEY_TIMEOUT_MS);
+          this.#options.bubbles.journey(agentId, stops, () => {
+            clearTimeout(timer);
+            resolve();
+          });
+        }),
+    );
   }
 
   /** The orb follows its agent's actions on the attached window, and goes back to the corner after. */

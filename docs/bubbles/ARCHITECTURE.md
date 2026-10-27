@@ -179,6 +179,24 @@ bounds, "call get_window_state first, act only in this window") to each turn of 
 A known browser's address bar is read with a small `get_window_state` query, and the bubble offers
 "Open in OpenBot browser" (`BrowserHost.open(url, null, agentId)`).
 
+### Go to an app
+
+The bubble is a worker whose office is the desktop. A free bubble's turns start with a short
+`<openbot_desktop>` block (`src/backend/bubbles/desktop-worker.ts`): when the request is about
+something an app shows or does, go there with the OpenBot tool `go_to_app`. The tool is in the
+OpenBot namespace (a direct tool, so no `tool_search`), routed by `openbot-tool-router.ts` to the
+host that `BubbleAttachController` registers (`setDesktopWorkerHost`). `goToApp(agentId, app)` reads
+`list_windows`, picks the app's frontmost usable window (`appWindow`: exact name first, then a
+shortened or lengthened one), sends the orb on a `journey` (`BubbleWindowManager`: an open panel
+closes first, then the orb flies by the Dock, `dockStop` on the display's Dock strip, pauses, and
+flies onto the window's corner), then attaches as a drop would. The result names the window and
+says to call `get_window_state` next; the attached-window block takes over on the following turns,
+and it now says to call `go_to_app` again when the user asks about another app. An app with no
+window is reported (`list_apps`: running with no window, not running with its bundle id, or
+unknown) so the agent opens it with its own Computer Use `launch_app`; main never launches, clicks
+or types, so the agent's approval policy still covers every action. The driver does not expose the
+Dock's icons, so the Dock stop is the middle of the strip; it is skipped when the Dock is hidden.
+
 ### Characters, chats, local analyst
 
 - Characters (`bubble-characters.ts`): eight body shape and colour pairs of the avatar engine,

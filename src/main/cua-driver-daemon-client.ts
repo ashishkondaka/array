@@ -101,6 +101,20 @@ export class CuaDriverDaemonClient {
   }
 
   /**
+   * bubbles: the apps of this Mac, running and installed, as `list_apps` reports them. A bubble sent
+   * to an app that has no window reads here whether the app runs at all.
+   */
+  listApps(): Effect.Effect<unknown, CuaDriverFailure> {
+    return this.#request({
+      method: "call",
+      name: "list_apps",
+      args: {},
+      session_id: SESSION_ID,
+      client_kind: "cli",
+    }).pipe(Effect.map((result) => (isDynamicRecord(result) ? result.structuredContent : null)));
+  }
+
+  /**
    * Every live lease the daemon holds, including the agents'.
    *
    * This is the daemon's own view rather than a lease's. A client only ever sees its own sessions

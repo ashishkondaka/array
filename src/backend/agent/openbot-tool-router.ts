@@ -39,6 +39,7 @@ import type { AgentStore } from "../agent-store";
 import type { AgentTasks } from "../agent-tasks/agent-tasks";
 import type { AgentWaits } from "../agent-waits/agent-waits";
 import { OPENBOT_BROWSER_NAMESPACE } from "../browser-tools";
+import { desktopWorkerTool, isDesktopWorkerTool } from "../bubbles/desktop-worker"; // bubbles: go_to_app
 import type { ChannelService } from "../channel-service";
 import type { ProviderSession } from "../database/provider-sessions";
 import type { MailboxStore } from "../mailbox-store";
@@ -452,6 +453,19 @@ export class OpenBotToolRouter {
             }
             if (toolRequest.params.tool === "capture_screen" || toolRequest.params.tool === "list_capture_sources") {
               const result = yield* this.#screenCaptureTool(client, toolRequest, toolRequest.params);
+              if (!toolRequest.signal?.aborted && client.running) client.respond(toolRequest.id, result);
+              return;
+            }
+            // bubbles: a bubble goes to an app. Main moves the orb; the agent's own Computer Use tools do the rest.
+            if (isDesktopWorkerTool(toolRequest.params.tool)) {
+              const agentId = this.#conversation.agentForThread(toolRequest.params.threadId);
+              const agent = agentId
+                ? this.#hooks.listAgents().find((candidate) => candidate.id === agentId)
+                : undefined;
+              const result =
+                agent && !agentComputerUseEnabled(agent)
+                  ? openBotToolFailure(sourceText("error.agent.screenCaptureOff"))
+                  : yield* desktopWorkerTool(agent?.id ?? null, toolRequest.params);
               if (!toolRequest.signal?.aborted && client.running) client.respond(toolRequest.id, result);
               return;
             }

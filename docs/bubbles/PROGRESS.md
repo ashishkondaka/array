@@ -321,6 +321,16 @@ server runs) but nothing tells it the desktop exists, so it reaches for the brow
 is a short desktop block for free bubbles (the windows on screen, from the daemon's desktop state)
 with guidance to look at the matching window and attach itself there, so the orb moves to it.
 
+Built (user request: "let it be a worker, and the desktop is its office"): `go_to_app`, a direct
+OpenBot tool, and the `<openbot_desktop>` block for free bubbles. The block is static (no window
+list per turn: the agent asks `list_apps`/`list_windows` itself when it needs to, and the result of
+`go_to_app` names the window), so a free bubble costs nothing per turn and no window titles leak
+into every turn. `goToApp` reads windows and apps only; opening an app stays with the agent's
+`launch_app`, under its approval policy. The orb's trip: the panel closes if open, the orb flies by
+the Dock (the middle of the Dock strip; the driver has no icon positions), pauses 360 ms, flies onto
+the window's corner and attaches. Unit tests: `go-to-app.test.ts` (app matching, window choice,
+`list_apps` parsing, Dock stop on three edges and hidden). Narrow checks: `typecheck:node`, Biome.
+
 ## Status against the definition of done
 
 | Item | State |

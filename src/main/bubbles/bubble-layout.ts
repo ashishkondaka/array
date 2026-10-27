@@ -105,6 +105,33 @@ export function defaultOrbPosition(
   return clampInto({ x, y, width: BUBBLE_LIMITS.orbSize, height: BUBBLE_LIMITS.orbSize }, primary);
 }
 
+/** The gap between an orb resting by the Dock and the Dock itself. */
+const DOCK_GAP = 4;
+
+/**
+ * Where an orb stops by the Dock on its way to an app: just clear of the Dock strip, at its middle.
+ * The strip is the part of the display that the work area leaves out at the bottom, the left or the
+ * right (the menu bar at the top is not a Dock). Null when the Dock is hidden or on another display.
+ * The driver does not expose the Dock's icons, so the middle of the strip stands for the icon.
+ */
+export function dockStop(display: { bounds: BubbleBounds; workArea: BubbleBounds }): { x: number; y: number } | null {
+  const { bounds, workArea } = display;
+  const size = BUBBLE_LIMITS.orbSize;
+  const bottom = bounds.y + bounds.height - (workArea.y + workArea.height);
+  const left = workArea.x - bounds.x;
+  const right = bounds.x + bounds.width - (workArea.x + workArea.width);
+  if (bottom > 0 && bottom >= left && bottom >= right) {
+    return { x: Math.round(bounds.x + bounds.width / 2 - size / 2), y: workArea.y + workArea.height - size - DOCK_GAP };
+  }
+  if (left > 0 && left >= right) {
+    return { x: workArea.x + DOCK_GAP, y: Math.round(bounds.y + bounds.height / 2 - size / 2) };
+  }
+  if (right > 0) {
+    return { x: workArea.x + workArea.width - size - DOCK_GAP, y: Math.round(bounds.y + bounds.height / 2 - size / 2) };
+  }
+  return null;
+}
+
 /**
  * Moves an orb off any other orb it would cover, downwards in steps. Two bubbles snapped to one
  * window would otherwise sit on top of each other.

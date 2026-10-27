@@ -40,6 +40,7 @@ import {
   LIST_WAITS_TOOL,
   listWaitsToolSchema,
 } from "./agent-waits/agent-waits";
+import { DESKTOP_WORKER_TOOL_DEFINITIONS } from "./bubbles/desktop-worker"; // bubbles: go_to_app
 import { CHANNEL_TOOL_DEFINITIONS } from "./channel-tools";
 import { MESSAGING_TOOL_DEFINITIONS } from "./messaging/messaging-tools";
 import { ROUTINE_FLOW_TOOL_DEFINITIONS } from "./routine-flows/routine-flow-tools";
@@ -289,6 +290,7 @@ export const OPENBOT_TOOL_DEFINITIONS: readonly OpenBotToolDefinition[] = [
   ...LOCAL_SKILL_TOOL_DEFINITIONS,
   ...ROUTINE_FLOW_TOOL_DEFINITIONS,
   ...MCP_SERVER_TOOL_DEFINITIONS,
+  ...DESKTOP_WORKER_TOOL_DEFINITIONS, // bubbles: go_to_app
   {
     name: "list_sites",
     description:

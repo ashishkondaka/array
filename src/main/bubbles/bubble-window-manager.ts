@@ -26,6 +26,7 @@ import { isTrustedRendererUrl } from "../trusted-renderer";
 import {
   clampOrb,
   defaultOrbPosition,
+  dockStop,
   expandedBounds,
   orbSize,
   PANEL_OFFSET,
@@ -129,6 +130,10 @@ const WORK_OFFSET = 18;
 const VISIT_HOLD_MS = 2_600;
 /** How long the orb hovers over the app before it goes home. */
 const NUDGE_HOLD_MS = 4_500;
+/** How long the orb pauses at each stop of a trip to an app (by the Dock, as if to open the app). */
+const JOURNEY_HOLD_MS = 360;
+/** The close of an open panel finishes before the orb leaves on a trip. */
+const JOURNEY_AFTER_CLOSE_MS = 420;
 /** The orb moves once per display frame: 8.3 ms on a 120 Hz display, never slower than 60 Hz. */
 function frameInterval(point: { x: number; y: number }): number {
   const frequency = screen.getDisplayNearestPoint(point).displayFrequency;
@@ -454,6 +459,62 @@ export class BubbleWindowManager {
         y: Math.round(Math.min(Math.max(y, area.y), area.y + area.height - size.height)),
       },
       () => undefined,
+    );
+  }
+
+  /** Where an orb stops by the Dock of the display a point is on; null when that Dock is hidden. */
+  dockStopNear(point: { x: number; y: number }): { x: number; y: number } | null {
+    return dockStop(screen.getDisplayNearestPoint(point));
+  }
+
+  /**
+   * The orb goes to work: it flies through each stop in turn (by the Dock, then onto the window it was
+   * sent to) and calls back when it arrives. An open panel closes first, so the user sees the orb
+   * leave. A drag cuts the trip short where it is, and the caller's own timeout covers that. The saved
+   * place is not touched here: attaching, which follows, sets it.
+   */
+  journey(agentId: string, stops: readonly { x: number; y: number }[], done: () => void): void {
+    const open = this.#open.get(agentId);
+    const bubble = this.#find(agentId);
+    if (!open || !bubble || open.window.isDestroyed() || stops.length === 0) {
+      done();
+      return;
+    }
+    const wasExpanded = bubble.expanded;
+    if (wasExpanded) this.setExpanded(agentId, false);
+    else this.#stopNudge(agentId, false);
+    open.visiting = true;
+    open.window.showInactive();
+    const next = (index: number) => {
+      const stop = stops[index];
+      if (!stop || !open.visiting || open.window.isDestroyed()) {
+        open.visiting = false;
+        done();
+        return;
+      }
+      this.#travel(
+        agentId,
+        stop,
+        () => {
+          if (index + 1 >= stops.length) {
+            open.visiting = false;
+            done();
+            return;
+          }
+          open.homeTimer = setTimeout(() => {
+            open.homeTimer = null;
+            next(index + 1);
+          }, JOURNEY_HOLD_MS);
+        },
+        VISIT_RESPONSE,
+      );
+    };
+    open.homeTimer = setTimeout(
+      () => {
+        open.homeTimer = null;
+        next(0);
+      },
+      wasExpanded ? JOURNEY_AFTER_CLOSE_MS : 0,
     );
   }
 

@@ -109,3 +109,8 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | `packages/ui/src/features/account/LanguageWheel.tsx`, `AccountLogin.tsx`, `src/renderer/src/features/onboarding/SetupReadError.tsx` | the wordmark reads `productName()` instead of a literal |
 | `src/renderer/src/platform.tsx`, `features/computer-use/ComputerUsePermissionHelp.tsx`, `features/agent-templates/agent-template-card.tsx` | the app-info fallback, the permission card and the template card read `productName()` |
 | `src/renderer/index.html`, `helper.html`, `browser-pip.html`, `team-webrtc.html` | the static `<title>` (the window title before a page sets its own, and the accessibility name of the window) says Array |
+| `src/backend/openbot-tools.ts` | spreads `DESKTOP_WORKER_TOOL_DEFINITIONS` (`go_to_app`) into the OpenBot tools |
+| `src/backend/agent/tool-catalog.ts` | `go_to_app` is a direct tool (visible without `tool_search`) |
+| `src/backend/agent/openbot-tool-router.ts` | dispatches `go_to_app` to `desktop-worker.ts`, after the Computer Use check |
+| `src/backend/agent/developer-instructions.ts` | `isTurnContextBlock` knows the `<openbot_desktop>` block |
+| `src/main/cua-driver-daemon-client.ts` | `listApps()` (the driver's `list_apps`), beside `windowState()` |

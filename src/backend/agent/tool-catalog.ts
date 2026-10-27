@@ -29,6 +29,7 @@ const DIRECT_NAMES = new Set([
   "forget_memory",
   "react_to_user_message",
   "request_api_key",
+  "go_to_app", // bubbles: a bubble goes to an app without searching for the tool first
 ]);
 
 // Names keep the complete, stable catalog below 4,000 characters without schema duplication.

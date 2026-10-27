@@ -135,6 +135,102 @@ export function frontWindow(
   return front;
 }
 
+/** An app name as the user or an agent types it, against one as macOS reports it. */
+function appKey(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\.app$/u, "");
+}
+
+/** Exact first, then the name the user shortened ("Chrome" for "Google Chrome") or lengthened. */
+export function appMatch(appName: string, query: string): "exact" | "partial" | null {
+  const name = appKey(appName);
+  const wanted = appKey(query);
+  if (!name || !wanted) return null;
+  if (name === wanted) return "exact";
+  return name.includes(wanted) || wanted.includes(name) ? "partial" : null;
+}
+
+/**
+ * The window an agent sent to an app goes to: the frontmost usable window of the app whose name
+ * matches best. OpenBot's own windows and the bubbles are never a destination.
+ */
+export function appWindow(
+  windows: readonly DesktopWindow[],
+  query: string,
+  ownPid: number,
+  bubbleWindowIds: ReadonlySet<number>,
+): DesktopWindow | null {
+  let best: { window: DesktopWindow; exact: boolean } | null = null;
+  for (const window of windows) {
+    const match = appMatch(window.appName, query);
+    if (
+      !match ||
+      window.pid === ownPid ||
+      bubbleWindowIds.has(window.windowId) ||
+      !window.onScreen ||
+      !window.onCurrentSpace ||
+      window.appName === DRIVER_OVERLAY_APP ||
+      window.bounds.width < MINIMUM_TARGET_SIZE ||
+      window.bounds.height < MINIMUM_TARGET_SIZE
+    )
+      continue;
+    const exact = match === "exact";
+    if (!best || (exact && !best.exact) || (exact === best.exact && (best.window.zIndex ?? -1) < (window.zIndex ?? -1)))
+      best = { window, exact };
+  }
+  return best?.window ?? null;
+}
+
+/** One app as the driver's `list_apps` reports it. */
+export interface DesktopApp {
+  name: string;
+  bundleId: string | null;
+  running: boolean;
+  /** 0 when the app is not running. */
+  pid: number;
+  launchPath: string | null;
+}
+
+/** Reads `list_apps`' structured payload. A record that does not parse is skipped. */
+export function readDesktopApps(payload: unknown): DesktopApp[] {
+  const records = Array.isArray(payload)
+    ? payload
+    : isDynamicRecord(payload) && Array.isArray(payload.apps)
+      ? payload.apps
+      : [];
+  return records.flatMap((record): DesktopApp[] => {
+    if (!isDynamicRecord(record)) return [];
+    const name =
+      typeof record.name === "string" ? record.name : typeof record.app_name === "string" ? record.app_name : "";
+    if (!name) return [];
+    return [
+      {
+        name,
+        bundleId: typeof record.bundle_id === "string" ? record.bundle_id : null,
+        running: record.running === true,
+        pid: Number.isSafeInteger(record.pid) ? Number(record.pid) : 0,
+        launchPath: typeof record.launch_path === "string" ? record.launch_path : null,
+      },
+    ];
+  });
+}
+
+/** The app that matches best: an exact name or bundle id first, a running app before an installed one. */
+export function findApp(apps: readonly DesktopApp[], query: string): DesktopApp | null {
+  const wanted = appKey(query);
+  let best: { app: DesktopApp; rank: number } | null = null;
+  for (const app of apps) {
+    const match = appMatch(app.name, query);
+    const byBundle = app.bundleId !== null && app.bundleId.toLowerCase() === wanted;
+    if (!match && !byBundle) continue;
+    const rank = (match === "exact" || byBundle ? 2 : 0) + (app.running ? 1 : 0);
+    if (!best || best.rank < rank) best = { app, rank };
+  }
+  return best?.app ?? null;
+}
+
 /** The attached orb sits in the window's top-right corner; its chip reads leftwards from it. */
 export function snappedPosition(bounds: BubbleBounds): { x: number; y: number } {
   return {
