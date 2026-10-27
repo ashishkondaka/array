@@ -441,6 +441,16 @@ export class BubbleWindowManager {
     sendToRenderer(this.#open.get(agentId)?.window, IPC_ENDPOINTS.bubbles.motionCue, { agentId, cue: "greet" });
   }
 
+  /**
+   * The point a drop is judged by: the centre of the orb, which is under the pointer during a drag.
+   * An attached orb's window is wider, with the orb at its right end.
+   */
+  #orbCentre(agentId: string, corner: { x: number; y: number }): { x: number; y: number } {
+    const size = orbSize(this.#find(agentId) ?? { attached: null });
+    const half = BUBBLE_LIMITS.orbSize / 2;
+    return { x: Math.round(corner.x + size.width - half), y: Math.round(corner.y + half) };
+  }
+
   /** Moves a collapsed orb to `to` on the spring, frame by frame, without saving the position. */
   #travel(agentId: string, to: { x: number; y: number }, done: () => void, response: number = DEFAULT_RESPONSE): void {
     const open = this.#open.get(agentId);
@@ -508,7 +518,7 @@ export class BubbleWindowManager {
           open.dwellTimer = null;
           if (!open.dragging || open.dwellAt) return;
           open.dwellAt = { x: point.x, y: point.y };
-          this.#attachHandler?.dwell(agentId, screen.getCursorScreenPoint());
+          this.#attachHandler?.dwell(agentId, this.#orbCentre(agentId, point));
         }, DWELL_MS)
       : null;
     // Position only: the size does not change mid-drag, and a resize per frame would make it judder.
@@ -529,7 +539,7 @@ export class BubbleWindowManager {
     const [x = 0, y = 0] = open.window.getPosition();
     this.#update(agentId, (bubble) => ({ ...bubble, x, y }));
     // The orb stays exactly where it was let go; only an Option-drop attaches (and snaps).
-    this.#attachHandler?.release(agentId, attach, screen.getCursorScreenPoint());
+    this.#attachHandler?.release(agentId, attach, this.#orbCentre(agentId, { x, y }));
   }
 
   /** Sets a bubble's state from outside, such as an attach. Main moves the window to match. */
