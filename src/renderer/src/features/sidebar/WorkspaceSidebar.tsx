@@ -284,6 +284,8 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
       onPopOutAgent={bubbles.available() && !platform.landingPreview ? bubbles.popOut : undefined}
       onBringBackAgent={bubbles.bringBack}
       poppedOutAgentIds={bubbles.poppedOutIds()}
+      bubbleCharacterOf={bubbles.characterOf}
+      onChooseBubbleCharacter={bubbles.available() && !platform.landingPreview ? bubbles.setCharacter : undefined}
       compact={layout.leftPanelCompact()}
       onExpand={layout.expandSidebar}
       onOpenSearch={() => setGlobalSearchVisibility(true)}

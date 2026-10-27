@@ -1053,7 +1053,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
     onChatWindows: () => () => undefined,
     // bubbles: the preview is one page, so no agent floats in a window of its own.
     bubbles: {
-      list: async () => ({ bubbles: [], hidden: false }),
+      list: async () => ({ bubbles: [], hidden: false, characters: [], nudges: true }),
       open: async () => undefined,
       close: async () => undefined,
       setExpanded: async () => undefined,
@@ -1061,7 +1061,13 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       setHidden: async () => undefined,
       dragTo: async () => undefined,
       dragEnd: async () => undefined,
+      setCharacter: async () => undefined,
+      setNudges: async () => undefined,
+      nudge: async () => undefined,
+      detach: async () => undefined,
+      openAttachedInBrowser: async () => undefined,
       onChanged: () => () => undefined,
+      onAttachStatus: () => () => undefined,
     },
     // The preview has no native page, so the overlay is never on screen and the DOM dock stays.
     browserDock: {

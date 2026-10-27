@@ -2,8 +2,10 @@
 
 import {
   BUBBLE_LIMITS,
+  type BubbleCharacterInput,
   type BubbleDragPoint,
   type BubbleExpandedInput,
+  isBubbleCharacterId,
   isBubbleDragPoint,
 } from "@openbot/contracts/ipc";
 import { isBoolean, isDynamicRecord } from "@openbot/contracts/runtime-values";
@@ -29,4 +31,15 @@ export function parseBubbleDragPoint(input: unknown): BubbleDragPoint {
     throw new Error(`A drag point is two integers within ${BUBBLE_LIMITS.coordinate} points of the origin.`);
   }
   return { x: input.x, y: input.y };
+}
+
+export function parseBubbleCharacter(input: unknown): BubbleCharacterInput {
+  if (!isDynamicRecord(input)) throw new Error("A character choice is required.");
+  if (input.character !== null && !isBubbleCharacterId(input.character)) throw new Error("Unknown character.");
+  return { agentId: requireString(input.agentId, "Agent"), character: input.character };
+}
+
+export function parseBubbleNudges(input: unknown): boolean {
+  if (!isBoolean(input)) throw new Error("Nudges must be a boolean.");
+  return input;
 }

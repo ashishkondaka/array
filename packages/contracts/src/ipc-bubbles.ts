@@ -8,6 +8,8 @@ import { isBoolean, isDynamicRecord, isOneOf } from "./runtime-values";
 export const BUBBLE_LIMITS = {
   /** Bubbles open at once. Each one is a renderer process. */
   bubbles: 8,
+  /** Agents with a chosen character. */
+  characters: 500,
   /** The collapsed orb window, a square. */
   orbSize: 72,
   /** The collapsed window when an attachment chip shows beside the orb. */
@@ -62,10 +64,32 @@ export interface BubbleState {
   attached: AttachedSurface | null;
 }
 
+/**
+ * The characters a bubble can wear, chosen per agent in the main window. Each is a body shape and a
+ * colour of the agent avatar engine; `@openbot/ui/features/bubbles/bubble-characters` draws them.
+ */
+export const BUBBLE_CHARACTER_IDS = ["pip", "pebble", "nimbus", "hexa", "bean", "spark", "cubby", "rosie"] as const;
+export type BubbleCharacterId = (typeof BUBBLE_CHARACTER_IDS)[number];
+
+export interface BubbleCharacterChoice {
+  agentId: string;
+  character: BubbleCharacterId;
+}
+
+export interface BubbleCharacterInput {
+  agentId: string;
+  /** Null goes back to the agent's own avatar. */
+  character: BubbleCharacterId | null;
+}
+
 export interface BubblesSnapshot {
   bubbles: BubbleState[];
   /** The global shortcut and the tray hide every bubble without closing it. */
   hidden: boolean;
+  /** Kept apart from the bubbles, so a character survives "Bring back" and the next pop-out. */
+  characters: BubbleCharacterChoice[];
+  /** Whether an orb may travel to the pointer when its agent replies or needs an answer. */
+  nudges: boolean;
 }
 
 /** Why an attach did not happen. The bubble shows the fix. */
@@ -141,13 +165,25 @@ export function isBubbleState(value: unknown): value is BubbleState {
   );
 }
 
+export function isBubbleCharacterId(value: unknown): value is BubbleCharacterId {
+  return isOneOf(BUBBLE_CHARACTER_IDS, value);
+}
+
+export function isBubbleCharacterChoice(value: unknown): value is BubbleCharacterChoice {
+  return isDynamicRecord(value) && isIdentifier(value.agentId) && isBubbleCharacterId(value.character);
+}
+
 export function isBubblesSnapshot(value: unknown): value is BubblesSnapshot {
   return (
     isDynamicRecord(value) &&
     Array.isArray(value.bubbles) &&
     value.bubbles.length <= BUBBLE_LIMITS.bubbles &&
     value.bubbles.every(isBubbleState) &&
-    isBoolean(value.hidden)
+    isBoolean(value.hidden) &&
+    Array.isArray(value.characters) &&
+    value.characters.length <= BUBBLE_LIMITS.characters &&
+    value.characters.every(isBubbleCharacterChoice) &&
+    isBoolean(value.nudges)
   );
 }
 

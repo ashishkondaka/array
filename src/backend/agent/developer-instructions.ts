@@ -14,6 +14,7 @@ import {
 } from "@openbot/contracts/ipc";
 import { redactText } from "@openbot/logging";
 import { automationRunCommand } from "../automation-command";
+import { ATTACHED_WINDOW_BLOCK_START } from "../bubbles/attached-window-context"; // bubbles: attached window
 import type { HomeSkill } from "../home-skills";
 
 export interface VaultContents {
@@ -202,7 +203,8 @@ export function memoryContextUpdate(delivered: MemoryContext | null, current: Me
  * text that a person wrote.
  */
 export function isTurnContextBlock(text: string): boolean {
-  return [MEMORY_BLOCK_START, MEMORY_UPDATE_START, TEAMMATES_BLOCK_START].some((start) =>
+  // bubbles: the attached-window block is turn context too.
+  return [MEMORY_BLOCK_START, MEMORY_UPDATE_START, TEAMMATES_BLOCK_START, ATTACHED_WINDOW_BLOCK_START].some((start) =>
     text.startsWith(`${start}\n`),
   );
 }

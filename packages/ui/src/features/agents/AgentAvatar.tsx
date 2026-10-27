@@ -71,6 +71,8 @@ interface AgentAvatarProps {
    * so use it only where few avatars show. A photo avatar and reduced motion ignore it.
    */
   followPointer?: boolean;
+  /** bubbles: frames a second while it moves. A bubble orb in motion draws at the display rate. */
+  fps?: number | undefined;
   class?: string;
   style?: Record<string, string>;
 }
@@ -111,6 +113,7 @@ export function AgentAvatar(props: AgentAvatarProps) {
           animationOffset={props.animationOffset}
           shape={props.shape}
           followPointer={props.followPointer === true}
+          fps={props.fps}
           breathe={breathe()}
           class={className()}
           style={style()}
@@ -275,6 +278,7 @@ function GeneratedAvatar(props: {
   animationOffset?: number | undefined;
   shape?: SupportedAvatarSilhouetteId | undefined;
   followPointer: boolean;
+  fps?: number | undefined;
   breathe?: string | undefined;
   class: string;
   style?: Record<string, string>;
@@ -352,7 +356,7 @@ function GeneratedAvatar(props: {
       expression={appearance().expression}
       cycle={motionCycle()}
       playing={true}
-      fps={AVATAR_FPS}
+      fps={props.fps ?? AVATAR_FPS}
       initialPhase={props.animationOffset ?? avatarAnimationPhase(props.seed)}
       gaze={gazeScript()}
       ariaLabel=""

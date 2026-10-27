@@ -1,12 +1,13 @@
 import type {
   AvatarHue,
+  BubbleCharacterId,
   ChannelSummary,
   DirectThreadSummary,
   HiddenAgent,
   SidebarLayoutAction,
   SidebarLayoutSnapshot,
   TeamPresenceMember,
-} from "@openbot/contracts/ipc";
+} from "@openbot/contracts/ipc"; // bubbles: characters
 import type { JSX } from "@solidjs/web";
 import type { AvatarMood } from "../../bloub-avatar";
 import type { AgentProfile } from "../../data";
@@ -121,6 +122,10 @@ export interface SidebarProps {
   onBringBackAgent?: ((agentId: string) => void) | undefined;
   /** bubbles: the agents in a desktop bubble. Their rows show a bubble mark. */
   poppedOutAgentIds?: ReadonlySet<string> | undefined;
+  /** bubbles: the character an agent's bubble wears, or null for its own look. */
+  bubbleCharacterOf?: ((agentId: string) => BubbleCharacterId | null) | undefined;
+  /** bubbles: chooses it. Without it, the agent menu shows no character submenu. */
+  onChooseBubbleCharacter?: ((agentId: string, character: BubbleCharacterId | null) => void) | undefined;
   compact: boolean;
   /** A card under the chat list, such as an announcement. The compact sidebar has no room for it. */
   footer?: JSX.Element;

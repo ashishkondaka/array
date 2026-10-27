@@ -45,7 +45,7 @@ describe("the saved bubbles file", () => {
       bubbles: [bubble("agent-a", { extra: "dropped", attached: { ...attached, extra: 1 } })],
       future: "dropped",
     });
-    expect(decoded).toEqual({ hidden: true, bubbles: [bubble("agent-a", { attached })] });
+    expect(decoded).toEqual({ hidden: true, bubbles: [bubble("agent-a", { attached })], characters: [], nudges: true });
   });
 
   it("reads another version, or a shape that is not a file, as the default", () => {
@@ -82,6 +82,30 @@ describe("the saved bubbles file", () => {
   });
 
   it("treats a hidden flag that is not a boolean as shown", () => {
-    expect(decodeBubblesFile({ version: 1, hidden: "yes", bubbles: [] })).toEqual({ hidden: false, bubbles: [] });
+    expect(decodeBubblesFile({ version: 1, hidden: "yes", bubbles: [] })).toEqual({
+      hidden: false,
+      bubbles: [],
+      characters: [],
+      nudges: true,
+    });
+  });
+
+  it("keeps valid character choices, one per agent, and the nudge setting", () => {
+    const decoded = decodeBubblesFile({
+      version: 1,
+      bubbles: [],
+      nudges: false,
+      characters: [
+        { agentId: "agent-a", character: "nimbus" },
+        { agentId: "agent-a", character: "pip" },
+        { agentId: "agent-b", character: "dragon" },
+        { agentId: "agent-c", character: "rosie", extra: 1 },
+      ],
+    });
+    expect(decoded?.characters).toEqual([
+      { agentId: "agent-a", character: "nimbus" },
+      { agentId: "agent-c", character: "rosie" },
+    ]);
+    expect(decoded?.nudges).toBe(false);
   });
 });

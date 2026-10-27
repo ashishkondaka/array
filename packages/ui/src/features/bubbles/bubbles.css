@@ -38,6 +38,8 @@ html[data-bubble-window] body {
   display: flex;
   align-items: center;
   gap: var(--openbot-space-2);
+  /* Centred in the orb window; an attached orb sits at the right end with its chip to its left. */
+  margin: auto;
   padding: var(--openbot-space-1);
   /* It appears from nothing, so it grows in place rather than sliding from anywhere. */
   animation: bubble-orb-in var(--openbot-duration-normal) var(--openbot-ease-out) both;
@@ -70,10 +72,80 @@ html[data-bubble-window] body {
   transform: scale(0.94);
 }
 
-.bubble-orb-avatar {
-  width: calc(var(--bubble-orb-size) - var(--openbot-space-3));
-  height: calc(var(--bubble-orb-size) - var(--openbot-space-3));
+.bubble-orb-frame[data-attached] {
+  flex-direction: row-reverse;
+  margin: auto 0 auto auto;
+}
+
+/* The character's own layer: hops and wiggles move it, never the glass around it. Only transform
+ * animates, so the compositor runs it at the display rate (120 Hz on ProMotion) off the main thread. */
+.bubble-orb-body {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
   pointer-events: none;
+}
+
+/* The avatar's SVG is drawn at 128% of its box and overflows to the bottom right; a negative margin
+ * of half the overflow centres it. Scoped one level deeper than `.agent-avatar`, which the app shell
+ * sets to 32px later in the cascade. */
+.bubble-orb .bubble-orb-avatar {
+  width: calc(var(--bubble-orb-size) * 0.72);
+  height: calc(var(--bubble-orb-size) * 0.72);
+  pointer-events: none;
+}
+
+.bubble-orb .bubble-orb-avatar > svg {
+  margin: -14%;
+}
+
+.bubble-orb[data-motion="hop"] .bubble-orb-body {
+  animation: bubble-orb-hop calc(var(--openbot-duration-slow) * 2) var(--openbot-ease-out) both;
+  will-change: transform;
+}
+
+.bubble-orb[data-motion="nudge"] .bubble-orb-body {
+  animation: bubble-orb-wiggle var(--openbot-duration-slow) var(--openbot-ease-in-out) 3 both;
+  will-change: transform;
+}
+
+/* Squash before the jump, stretch in the air, squash on landing: the hop reads as weight. */
+@keyframes bubble-orb-hop {
+  0% {
+    transform: translateY(0) scale(1, 1);
+  }
+
+  15% {
+    transform: translateY(0) scale(1.08, 0.9);
+  }
+
+  45% {
+    transform: translateY(-14%) scale(0.94, 1.08);
+  }
+
+  75% {
+    transform: translateY(0) scale(1.05, 0.95);
+  }
+
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+@keyframes bubble-orb-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  25% {
+    transform: rotate(-9deg) scale(1.06);
+  }
+
+  75% {
+    transform: rotate(9deg) scale(1.06);
+  }
 }
 
 /* The status is a glow in the glass edge, not a painted border. */
@@ -224,7 +296,7 @@ html[data-bubble-window] body {
   backdrop-filter: blur(var(--bubble-glass-blur)) saturate(180%);
 }
 
-.bubble-panel-avatar {
+.bubble-panel-header .bubble-panel-avatar {
   width: var(--openbot-control-sm);
   height: var(--openbot-control-sm);
   flex: none;
@@ -319,6 +391,10 @@ html[data-bubble-window="collapsed"] [data-sonner-toaster] {
 
   .bubble-orb.ui-button:active {
     transform: none;
+  }
+
+  .bubble-orb[data-motion] .bubble-orb-body {
+    animation: none;
   }
 
   .bubble-orb[data-status="attention"] .bubble-orb-ring {

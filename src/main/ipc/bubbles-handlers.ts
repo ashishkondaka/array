@@ -3,12 +3,23 @@
 // sender id decides which bubble a drag moves, never the payload.
 
 import type { IpcMainInvokeEvent } from "electron";
+import { runCauseEffect } from "../../backend/effect-boundary";
+import type { BubbleAttachController } from "../bubbles/bubble-attach";
 import type { BubbleWindowManager } from "../bubbles/bubble-window-manager";
-import { parseBubbleAgentId, parseBubbleDragPoint, parseBubbleExpanded, parseBubbleHidden } from "./bubbles-inputs";
+import {
+  parseBubbleAgentId,
+  parseBubbleCharacter,
+  parseBubbleDragPoint,
+  parseBubbleExpanded,
+  parseBubbleHidden,
+  parseBubbleNudges,
+} from "./bubbles-inputs";
 import { authorizedHandler, eventHandler, handler, type IpcGroupHandlers, payloadHandler } from "./define-ipc-group";
 
 export interface BubblesIpcDependencies {
   bubbles: BubbleWindowManager;
+  /** Built with the services, after the handlers are registered. */
+  attach: () => BubbleAttachController | null;
 }
 
 export function requireBubbleSender(bubbles: Pick<BubbleWindowManager, "agentForSender">, senderId: number): string {
@@ -17,7 +28,7 @@ export function requireBubbleSender(bubbles: Pick<BubbleWindowManager, "agentFor
   return agentId;
 }
 
-export function bubblesIpcHandlers({ bubbles }: BubblesIpcDependencies): Pick<IpcGroupHandlers, "bubbles"> {
+export function bubblesIpcHandlers({ bubbles, attach }: BubblesIpcDependencies): Pick<IpcGroupHandlers, "bubbles"> {
   const fromBubble = (event: IpcMainInvokeEvent) => {
     requireBubbleSender(bubbles, event.sender.id);
   };
@@ -35,6 +46,16 @@ export function bubblesIpcHandlers({ bubbles }: BubblesIpcDependencies): Pick<Ip
         bubbles.dragTo(requireBubbleSender(bubbles, event.sender.id), point),
       ),
       dragEnd: eventHandler((event) => bubbles.dragEnd(requireBubbleSender(bubbles, event.sender.id))),
+      setCharacter: payloadHandler(parseBubbleCharacter, ({ agentId, character }) =>
+        bubbles.setCharacter(agentId, character),
+      ),
+      setNudges: payloadHandler(parseBubbleNudges, (nudges) => bubbles.setNudges(nudges)),
+      nudge: eventHandler((event) => bubbles.nudge(requireBubbleSender(bubbles, event.sender.id))),
+      detach: payloadHandler(parseBubbleAgentId, (agentId) => attach()?.detach(agentId)),
+      openAttachedInBrowser: payloadHandler(parseBubbleAgentId, (agentId) => {
+        const controller = attach();
+        return controller ? runCauseEffect(controller.openInBrowser(agentId)) : undefined;
+      }),
     },
   };
 }

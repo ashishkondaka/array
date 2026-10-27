@@ -385,6 +385,7 @@
     "./features/bubbles/BubbleNotice": "./src/features/bubbles/BubbleNotice.tsx",
     "./features/bubbles/BubbleOrb": "./src/features/bubbles/BubbleOrb.tsx",
     "./features/bubbles/BubblePanelHeader": "./src/features/bubbles/BubblePanelHeader.tsx",
+    "./features/bubbles/bubble-characters": "./src/features/bubbles/bubble-characters.ts",
     "./features/bubbles/bubble-status": "./src/features/bubbles/bubble-status.ts",
     "./features/bubbles/bubbles.css": "./src/features/bubbles/bubbles.css",
     "./features/dynamic-island/dynamic-island.css": "./src/features/dynamic-island/dynamic-island.css",

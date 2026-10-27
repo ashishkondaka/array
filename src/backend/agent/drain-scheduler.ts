@@ -5,6 +5,7 @@ import { createOpenBotLogger } from "@openbot/logging";
 import { Deferred, Effect, Result, Schema } from "effect";
 import { type AgentProvider, ProviderTurnActiveError } from "../agent-client";
 import type { AgentStore } from "../agent-store";
+import { withAttachedWindow } from "../bubbles/attached-window-context"; // bubbles: attached window
 import type { ChannelService } from "../channel-service";
 import { causeHelpers } from "../effect-boundary";
 import type { DeliveryContext, MailboxStore } from "../mailbox-store";
@@ -709,7 +710,7 @@ export class DrainScheduler {
       // session can change from here to the retry below, as when the provider cannot resume it.
       const delta = channelDelivery ? channels?.delta(delivery.id) : undefined;
       const deltaInput = delta ? promptInput(delta.text) : null;
-      const inputForThread = (providerThreadId: string) => {
+      const inputWithHandoff = (providerThreadId: string) => {
         const input = deltaInput && channels?.sendsDelta(delivery.id, providerThreadId) ? deltaInput : completeInput;
         const handoff = this.#threads.consumePendingHandoff(providerThreadId);
         if (!handoff) return input;
@@ -719,6 +720,9 @@ export class DrainScheduler {
             : item,
         );
       };
+      // bubbles: an agent attached to a window reads where it is at the start of each turn.
+      const inputForThread = (providerThreadId: string) =>
+        withAttachedWindow(agent.id, inputWithHandoff(providerThreadId));
 
       for (const { delivery: item } of batch) {
         if (snapshot.messages.some((message) => message.id === item.id)) continue;

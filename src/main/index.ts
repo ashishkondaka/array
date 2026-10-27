@@ -31,6 +31,7 @@ import { runCauseEffect } from "../backend/effect-boundary";
 import { readAppVariant, resolveAppIconPath, resolveLogoColorIconPath } from "./app-icon";
 import { type ApplicationServices, createApplicationServices } from "./application-services";
 import { type BackgroundTray, createBackgroundTray } from "./background-tray";
+import { type BubbleAttachController, createBubbleAttach } from "./bubbles/bubble-attach-wiring"; // bubbles: attach
 import { BubbleWindowManager } from "./bubbles/bubble-window-manager"; // bubbles: window manager
 import {
   BUBBLES_APP_ID,
@@ -444,6 +445,9 @@ const bubbles = new BubbleWindowManager({
   quit: () => app.quit(),
 });
 
+// bubbles: drag-to-attach needs the Computer Use driver, so it is built with the services.
+let bubbleAttach: BubbleAttachController | null = null;
+
 let appIconColorImage: NativeImage | undefined;
 let backgroundTray: BackgroundTray | null = null;
 
@@ -636,7 +640,7 @@ function registerIpcHandlers({
   const getDialogParent = () => windows.getChatWindows().find((window) => window.isFocused()) ?? windowHolder.current;
 
   registerIpcGroups({
-    ...bubblesIpcHandlers({ bubbles }), // bubbles: IPC group
+    ...bubblesIpcHandlers({ bubbles, attach: () => bubbleAttach }), // bubbles: IPC group
     ...appIpcHandlers({
       service,
       mailbox,
@@ -1282,6 +1286,8 @@ if (!hasSingleInstanceLock) {
       });
       // Before the renderer loads: the trust boundary and every protocol it fetches through have to
       // be in place before the first request can arrive.
+      bubbleAttach = createBubbleAttach(built, bubbles); // bubbles: drag-to-attach
+      teardown.push(0, "bubble attach", () => bubbleAttach?.stop()); // bubbles: follow timer
       registerIpcHandlers(built);
       void requestDesktopNotificationPermission(built.notificationPreference, language.translate).catch((error) =>
         logger.warn("Unable to ask for notification permission:", toLogValue(error)),

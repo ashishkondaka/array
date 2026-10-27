@@ -8,7 +8,9 @@
 import { join } from "node:path";
 import {
   BUBBLE_LIMITS,
+  type BubbleAttachIssue,
   type BubbleBounds,
+  type BubbleCharacterId,
   type BubbleDragPoint,
   type BubbleState,
   type BubblesSnapshot,
@@ -22,6 +24,7 @@ import { PreferenceStore } from "../preference-file";
 import { sendToRenderer } from "../renderer-ipc";
 import { isTrustedRendererUrl } from "../trusted-renderer";
 import { clampOrb, defaultOrbPosition, expandedBounds, orbSize, separateOrb } from "./bubble-layout";
+import { NUDGE_MIN_DISTANCE, nudgeTarget, type SpringState, springSettled, springStep } from "./bubble-motion";
 import { BUBBLES_STATE_FILE, copyBubble, decodeBubblesFile, EMPTY_BUBBLES, newBubble } from "./bubble-state-file";
 import { setBubbleWindowSource } from "./bubble-window-registry";
 
@@ -57,6 +60,21 @@ interface OpenBubble {
   /** Set while main moves the window itself, so its own `moved` event is not a user move. */
   settingBounds: boolean;
   dragging: boolean;
+  /** The frame timer of a nudge in flight; the orb is away from its saved place while it runs. */
+  nudge: ReturnType<typeof setInterval> | null;
+  /** Waiting beside the pointer to go home; a drag or a click there cancels the trip home. */
+  homeTimer: ReturnType<typeof setTimeout> | null;
+  lastNudgeAt: number;
+}
+
+/** One nudge a minute at most for each orb: a nudge that repeats is noise. */
+const NUDGE_INTERVAL_MS = 60_000;
+/** How long the orb waits beside the pointer before it goes home. */
+const NUDGE_HOLD_MS = 3_500;
+/** The orb moves once per display frame: 8.3 ms on a 120 Hz display, never slower than 60 Hz. */
+function frameInterval(point: { x: number; y: number }): number {
+  const frequency = screen.getDisplayNearestPoint(point).displayFrequency;
+  return 1000 / Math.max(60, Math.min(240, Number.isFinite(frequency) && frequency > 0 ? frequency : 60));
 }
 
 /** A bubble whose renderer dies is opened again, but not in a loop. */
@@ -106,7 +124,7 @@ export class BubbleWindowManager {
       const saved = this.#store.get();
       const workAreas = this.#workAreas();
       this.#state = {
-        hidden: saved.hidden,
+        ...saved,
         bubbles: saved.bubbles
           .filter((bubble) => agents.has(bubble.agentId))
           .map((bubble) => ({ ...copyBubble(bubble), ...clampOrb(bubble, workAreas) })),
@@ -117,7 +135,12 @@ export class BubbleWindowManager {
   }
 
   snapshot(): BubblesSnapshot {
-    return { hidden: this.#state.hidden, bubbles: this.#state.bubbles.map(copyBubble) };
+    return {
+      hidden: this.#state.hidden,
+      bubbles: this.#state.bubbles.map(copyBubble),
+      characters: this.#state.characters.map((choice) => ({ ...choice })),
+      nudges: this.#state.nudges,
+    };
   }
 
   bubble(agentId: string): BubbleState | null {
@@ -157,7 +180,7 @@ export class BubbleWindowManager {
     }
     if (this.#state.bubbles.length >= BUBBLE_LIMITS.bubbles) throw new Error("Too many bubbles are open.");
     const bubble = newBubble(agentId, defaultOrbPosition(this.#state.bubbles, this.#workAreas()));
-    this.#state = { hidden: false, bubbles: [...this.#state.bubbles, bubble] };
+    this.#state = { ...this.#state, hidden: false, bubbles: [...this.#state.bubbles, bubble] };
     this.#openWindow(bubble);
     this.#afterChange(true);
   }
@@ -169,6 +192,8 @@ export class BubbleWindowManager {
   }
 
   setExpanded(agentId: string, expanded: boolean): void {
+    // A nudging orb that is clicked opens at home: the panel always opens from the saved corner.
+    this.#stopNudge(agentId);
     this.#update(agentId, (bubble) => ({ ...bubble, expanded }));
     const open = this.#open.get(agentId);
     if (expanded && open && !open.window.isDestroyed()) {
@@ -196,10 +221,115 @@ export class BubbleWindowManager {
     this.#options.focusMainWindow(agentId);
   }
 
+  /** Tells one bubble why its last drop did not attach, or that it did (null). */
+  reportAttachIssue(agentId: string, issue: BubbleAttachIssue | null): void {
+    const window = this.#open.get(agentId)?.window;
+    if (issue) this.setExpanded(agentId, true);
+    sendToRenderer(window, IPC_ENDPOINTS.bubbles.attachStatus, { agentId, issue });
+  }
+
+  /** The driver's ids for the bubble windows, which a drop looks through. */
+  driverWindowIds(): Set<number> {
+    const ids = new Set<number>();
+    for (const window of this.windows()) {
+      const id = Number(window.getMediaSourceId().split(":")[1]);
+      if (Number.isSafeInteger(id)) ids.add(id);
+    }
+    return ids;
+  }
+
+  setCharacter(agentId: string, character: BubbleCharacterId | null): void {
+    const others = this.#state.characters.filter((choice) => choice.agentId !== agentId);
+    if (!character && others.length === this.#state.characters.length) return;
+    this.#state = { ...this.#state, characters: character ? [...others, { agentId, character }] : others };
+    this.#afterChange(true);
+  }
+
+  setNudges(nudges: boolean): void {
+    if (this.#state.nudges === nudges) return;
+    this.#state = { ...this.#state, nudges };
+    if (!nudges) for (const agentId of this.#open.keys()) this.#stopNudge(agentId);
+    this.#afterChange(true);
+  }
+
+  /**
+   * The orb travels to the pointer, waits there, and goes home. Only a collapsed, unattached,
+   * visible orb nudges, at most once a minute, and only while nudges are on. The renderer asks
+   * for it (a reply arrived, an answer is needed) and skips it under reduced motion.
+   */
+  nudge(agentId: string): void {
+    const open = this.#open.get(agentId);
+    const bubble = this.#find(agentId);
+    if (!open || !bubble || open.window.isDestroyed() || open.dragging || open.nudge || open.homeTimer) return;
+    if (!this.#state.nudges || this.#state.hidden || bubble.expanded || bubble.attached) return;
+    const now = Date.now();
+    if (now - open.lastNudgeAt < NUDGE_INTERVAL_MS) return;
+    open.lastNudgeAt = now;
+    const away = nudgeTarget(screen.getCursorScreenPoint(), this.#workAreas());
+    if (Math.hypot(away.x - bubble.x, away.y - bubble.y) < NUDGE_MIN_DISTANCE) return;
+    open.window.showInactive();
+    this.#travel(agentId, away, () => {
+      open.homeTimer = setTimeout(() => {
+        open.homeTimer = null;
+        const home = this.#find(agentId);
+        if (home && !home.expanded) this.#travel(agentId, home, () => undefined);
+      }, NUDGE_HOLD_MS);
+    });
+  }
+
+  /** Moves a collapsed orb to `to` on the spring, frame by frame, without saving the position. */
+  #travel(agentId: string, to: { x: number; y: number }, done: () => void): void {
+    const open = this.#open.get(agentId);
+    if (!open || open.window.isDestroyed()) return;
+    const [startX = to.x, startY = to.y] = open.window.getPosition();
+    let x: SpringState = { position: startX, velocity: 0 };
+    let y: SpringState = { position: startY, velocity: 0 };
+    const size = orbSize(this.#find(agentId) ?? { attached: null });
+    if (open.nudge) clearInterval(open.nudge);
+    // The spring advances by the time that really passed, so a late timer tick moves the orb further
+    // instead of slowing it down: the path stays smooth whatever the timer does.
+    let last = performance.now();
+    open.nudge = setInterval(() => {
+      if (open.window.isDestroyed()) {
+        if (open.nudge) clearInterval(open.nudge);
+        return;
+      }
+      const now = performance.now();
+      const seconds = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      x = springStep(x, to.x, seconds);
+      y = springStep(y, to.y, seconds);
+      const settled = springSettled(x, to.x) && springSettled(y, to.y);
+      this.#setBounds(open, {
+        x: settled ? to.x : Math.round(x.position),
+        y: settled ? to.y : Math.round(y.position),
+        ...size,
+      });
+      if (!settled) return;
+      if (open.nudge) clearInterval(open.nudge);
+      open.nudge = null;
+      done();
+    }, frameInterval(to));
+  }
+
+  /** Cancels a nudge in flight or waiting, and puts the orb back at its saved place unless a drag has it. */
+  #stopNudge(agentId: string, restore = true): void {
+    const open = this.#open.get(agentId);
+    if (!open || (!open.nudge && !open.homeTimer)) return;
+    if (open.nudge) clearInterval(open.nudge);
+    if (open.homeTimer) clearTimeout(open.homeTimer);
+    open.nudge = null;
+    open.homeTimer = null;
+    const bubble = this.#find(agentId);
+    if (restore && bubble && !open.window.isDestroyed()) this.#applyBounds(open, bubble);
+  }
+
   /** Moves a dragged orb. Only the orb's own window may drag it. */
   dragTo(agentId: string, point: BubbleDragPoint): void {
     const open = this.#open.get(agentId);
     if (!open || open.window.isDestroyed()) return;
+    // The orb is grabbed where it is, even mid-nudge; it is not snapped home first.
+    this.#stopNudge(agentId, false);
     open.dragging = true;
     this.#setBounds(open, { ...point, ...orbSize(this.#find(agentId) ?? { attached: null }) });
   }
@@ -243,7 +373,11 @@ export class BubbleWindowManager {
     this.#shortcutRegistered = false;
     this.#tray?.destroy();
     this.#tray = null;
-    for (const open of this.#open.values()) if (!open.window.isDestroyed()) open.window.destroy();
+    for (const open of this.#open.values()) {
+      if (open.nudge) clearInterval(open.nudge);
+      if (open.homeTimer) clearTimeout(open.homeTimer);
+      if (!open.window.isDestroyed()) open.window.destroy();
+    }
     this.#open.clear();
   }
 
@@ -330,7 +464,14 @@ export class BubbleWindowManager {
         webSecurity: true,
       },
     });
-    const open: OpenBubble = { window, settingBounds: false, dragging: false };
+    const open: OpenBubble = {
+      window,
+      settingBounds: false,
+      dragging: false,
+      nudge: null,
+      homeTimer: null,
+      lastNudgeAt: 0,
+    };
     this.#open.set(bubble.agentId, open);
     window.setAlwaysOnTop(true, "floating");
     window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
@@ -358,6 +499,8 @@ export class BubbleWindowManager {
       this.#updateSilently(bubble.agentId, (state) => ({ ...state, width, height }));
     });
     window.on("closed", () => {
+      if (open.nudge) clearInterval(open.nudge);
+      if (open.homeTimer) clearTimeout(open.homeTimer);
       if (this.#open.get(bubble.agentId)?.window !== window) return;
       // A quit closes every window; the bubbles must come back on the next start.
       if (this.#options.isQuitting() || this.#destroyed) {
@@ -471,6 +614,12 @@ export class BubbleWindowManager {
           },
         })),
         { type: "separator" as const },
+        {
+          label: translate("bubbles.trayNudges"),
+          type: "checkbox" as const,
+          checked: this.#state.nudges,
+          click: () => this.setNudges(!this.#state.nudges),
+        },
         {
           label: translate(this.#state.hidden ? "bubbles.trayShowAll" : "bubbles.trayHideAll"),
           accelerator: BUBBLES_TOGGLE_SHORTCUT,

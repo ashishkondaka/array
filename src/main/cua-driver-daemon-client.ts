@@ -87,6 +87,20 @@ export class CuaDriverDaemonClient {
   }
 
   /**
+   * bubbles: one window's accessibility elements that match `query`, without a screenshot. A bubble
+   * dropped on a browser reads the address field this way; the projection keeps the reply small.
+   */
+  windowState(pid: number, windowId: number, query: string): Effect.Effect<unknown, CuaDriverFailure> {
+    return this.#request({
+      method: "call",
+      name: "get_window_state",
+      args: { pid, window_id: windowId, query, include_screenshot: false, max_elements: 200 },
+      session_id: SESSION_ID,
+      client_kind: "cli",
+    }).pipe(Effect.map((result) => (isDynamicRecord(result) ? result.structuredContent : null)));
+  }
+
+  /**
    * Every live lease the daemon holds, including the agents'.
    *
    * This is the daemon's own view rather than a lease's. A client only ever sees its own sessions

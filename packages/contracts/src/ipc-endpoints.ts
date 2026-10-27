@@ -193,7 +193,13 @@ import type {
   UpdateBrowserProfileInput,
 } from "./ipc-browser-profiles";
 import type { LocalBrowserSecretResponse } from "./ipc-browser-secret";
-import type { BubbleDragPoint, BubbleExpandedInput, BubblesSnapshot } from "./ipc-bubbles"; // bubbles: fork contracts
+import type {
+  BubbleAttachStatus,
+  BubbleCharacterInput,
+  BubbleDragPoint,
+  BubbleExpandedInput,
+  BubblesSnapshot,
+} from "./ipc-bubbles"; // bubbles: fork contracts
 import type {
   ChannelMemory,
   CreateChannelMemoryInput,
@@ -859,7 +865,17 @@ export const IPC_ENDPOINTS = {
     /** Only the bubble that the pointer drags sends these. */
     dragTo: request<BubbleDragPoint, void>()("bubbles:drag-to"),
     dragEnd: request<undefined, void>()("bubbles:drag-end"),
+    /** The character a bubble wears, chosen in the main window. */
+    setCharacter: request<BubbleCharacterInput, void>()("bubbles:set-character"),
+    setNudges: request<boolean, void>()("bubbles:set-nudges"),
+    /** Only a bubble sends this, for its own orb: it travels to the pointer and back. */
+    nudge: request<undefined, void>()("bubbles:nudge"),
+    detach: request<string, void>()("bubbles:detach"),
+    /** Opens the attached browser window's page in the OpenBot browser for the agent. */
+    openAttachedInBrowser: request<string, void>()("bubbles:open-attached-in-browser"),
     changed: event<BubblesSnapshot>()("bubbles:changed"),
+    /** Why the last drop of a bubble did not attach; null when it did. */
+    attachStatus: event<BubbleAttachStatus>()("bubbles:attach-status"),
   },
   computerUse: {
     getState: request<undefined, ComputerUseState>()("computer-use:get-state"),

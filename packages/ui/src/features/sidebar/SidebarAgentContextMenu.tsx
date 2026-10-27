@@ -7,6 +7,7 @@ import { AppWindow, ContextMenu, Copy, Moon, PictureInPicture2, Pin, PinOff, Rot
 import { Show } from "solid-js";
 import type { AgentProfile } from "../../data";
 import { useText } from "../../text";
+import { SidebarBubbleCharacterSubmenu } from "./SidebarBubbleCharacterSubmenu"; // bubbles: characters
 import { DeleteIcon, EditIcon } from "./SidebarIcons";
 import { SidebarMoveToSubmenu } from "./SidebarMoveToSubmenu";
 import type { SidebarPinnedItem } from "./sidebar-pins";
@@ -57,6 +58,9 @@ export function SidebarAgentContextMenu(menuProps: { agent: AgentProfile; pinned
               </ContextMenu.Item>
             );
           }}
+        </Show>
+        <Show when={!menuProps.userHidden}>
+          <SidebarBubbleCharacterSubmenu agent={menuProps.agent} />
         </Show>
         <SidebarMoveToSubmenu chatId={menuProps.agent.id} />
         <ContextMenu.Item onSelect={() => props.onEditAgent(menuProps.agent.id)}>
