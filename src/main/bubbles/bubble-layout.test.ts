@@ -30,12 +30,12 @@ describe("bubble layout", () => {
   });
 
   it("opens the panel from the orb and shifts it only to fit", () => {
-    expect(expandedBounds(state({ x: 100, y: 100 }), [primary])).toEqual({ x: 108, y: 112, width: 380, height: 560 });
+    expect(expandedBounds(state({ x: 100, y: 100 }), [primary])).toEqual({ x: 100, y: 100, width: 388, height: 572 });
     expect(expandedBounds(state({ x: 1360, y: 700 }), [primary])).toEqual({
-      x: 1440 - 380,
-      y: 25 + 875 - 560,
-      width: 380,
-      height: 560,
+      x: 1440 - 388,
+      y: 25 + 875 - 572,
+      width: 388,
+      height: 572,
     });
   });
 

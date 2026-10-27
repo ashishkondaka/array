@@ -4,7 +4,7 @@
 import { app } from "electron";
 import type { ApplicationServices } from "../application-services";
 import { CuaDriverDaemonClient } from "../cua-driver-daemon-client";
-import { computerUseDesktopRect } from "../main-window";
+import { computerUseDesktopPoint, computerUseDesktopRect } from "../main-window";
 import { probeModels } from "../model-server-probe";
 import { BubbleAttachController } from "./bubble-attach";
 import type { BubbleWindowManager } from "./bubble-window-manager";
@@ -12,6 +12,9 @@ import type { BubbleWindowManager } from "./bubble-window-manager";
 import { LocalAnalystSeed } from "./local-analyst";
 
 export type { BubbleAttachController, LocalAnalystSeed };
+
+/** An action this recent counts as the agent working; after it, the orb goes back to its corner. */
+const WORK_FRESH_MS = 2_500;
 
 export function createBubbleAttach(
   services: Pick<ApplicationServices, "browser" | "cuaDriver">,
@@ -31,6 +34,16 @@ export function createBubbleAttach(
     // The tab belongs to the agent, so its browser tools, secure input and takeover apply.
     openInBrowser: (agentId, url) => browser.open(url, null, agentId, false),
     reportIssue: (agentId, issue) => bubbles.reportAttachIssue(agentId, issue),
+    observedWork: () => {
+      const action = cuaDriver.lastAction(WORK_FRESH_MS);
+      if (!action) return null;
+      const pointer = cuaDriver.lastPointer(WORK_FRESH_MS);
+      return {
+        pid: action.pid,
+        windowId: action.windowId,
+        point: pointer ? computerUseDesktopPoint(pointer) : null,
+      };
+    },
   });
 }
 

@@ -48,3 +48,8 @@ export function parseBubbleNudges(input: unknown): boolean {
   if (!isBoolean(input)) throw new Error("Nudges must be a boolean.");
   return input;
 }
+
+/** The agent whose call a visiting bubble answers, or null for a social visit. */
+export function parseBubbleCaller(input: unknown): string | null {
+  return input === null || input === undefined ? null : requireString(input, "Agent");
+}

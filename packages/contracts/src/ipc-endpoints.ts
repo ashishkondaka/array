@@ -873,8 +873,11 @@ export const IPC_ENDPOINTS = {
     setNudges: request<boolean, void>()("bubbles:set-nudges"),
     /** Only a bubble sends this, for its own orb: it travels to the pointer and back. */
     nudge: request<undefined, void>()("bubbles:nudge"),
-    /** Only a bubble sends this, for its own orb: it floats over to other bubbles, greets them, and goes home. */
-    visit: request<undefined, void>()("bubbles:visit"),
+    /**
+     * Only a bubble sends this, for its own orb: it floats over to other bubbles, greets them, and
+     * goes home. With an agent id, it answers that agent's call: it flies to that agent's orb.
+     */
+    visit: request<string | null, void>()("bubbles:visit"),
     detach: request<string, void>()("bubbles:detach"),
     /** Opens the attached browser window's page in the OpenBot browser for the agent. */
     openAttachedInBrowser: request<string, void>()("bubbles:open-attached-in-browser"),

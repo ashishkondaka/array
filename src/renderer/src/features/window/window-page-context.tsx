@@ -1,6 +1,7 @@
 import type { SettingsPagePlacement } from "@openbot/ui/features/settings/SettingsDialogShell";
 import { createEffect, createMemo, createSignal, untrack } from "solid-js";
 import { createSimpleContext } from "../../simple-context";
+import { bubbleChatHidden } from "../bubbles/bubble-window";
 import { useServerSettings } from "../servers/server-settings";
 import { useServers } from "../servers/servers-context";
 import { useSettings } from "../settings/settings-context";
@@ -102,7 +103,8 @@ const context = createSimpleContext({
     return {
       page,
       /** Whether a page other than the agents covers the conversation. A message there is not seen. */
-      conversationCovered: () => page() !== "agents",
+      // bubbles: a collapsed bubble's chat is covered by its orb.
+      conversationCovered: () => page() !== "agents" || bubbleChatHidden(),
       setSettingsMounts,
       settingsPlacement,
       /** Shows the agents and closes the other pages. */

@@ -53,8 +53,24 @@ export interface BubbleAttachOptions {
   /** The driver reports physical pixels on Windows; Electron places windows in DIP. */
   toDesktopRect: (rect: BubbleBounds) => BubbleBounds;
   openInBrowser: (agentId: string, url: string) => Effect.Effect<unknown, unknown>;
+  /**
+   * The agent's last Computer Use action, from the driver tap: which window it aimed at and where,
+   * in desktop points. Null when nothing acted recently.
+   */
+  observedWork: () => ObservedWork | null;
   reportIssue: (agentId: string, issue: BubbleAttachIssue | null) => void;
 }
+
+export interface ObservedWork {
+  pid: number | null;
+  windowId: number | null;
+  point: { x: number; y: number } | null;
+}
+
+/** How often the orb checks where its agent acts. In memory only; it runs only while attached. */
+const WORK_TICK_MS = 120;
+/** The orb drifts to a new action point only when it moved this far, so it does not jitter. */
+const WORK_MOVE_MIN = 16;
 
 export function attachIssue(state: ComputerUseState): BubbleAttachIssue {
   if (state.status === "unsupported") return "unsupported-platform";
@@ -68,6 +84,9 @@ export function attachIssue(state: ComputerUseState): BubbleAttachIssue {
 export class BubbleAttachController {
   readonly #options: BubbleAttachOptions;
   #follow: ReturnType<typeof setInterval> | null = null;
+  #workTick: ReturnType<typeof setInterval> | null = null;
+  /** Where each working orb was last sent, by agent. */
+  readonly #workingAt = new Map<string, { x: number; y: number }>();
 
   /** The window each dragged bubble rests over, which a release attaches it to. */
   readonly #armed = new Map<string, DesktopWindow>();
@@ -112,7 +131,33 @@ export class BubbleAttachController {
 
   stop(): void {
     if (this.#follow) clearInterval(this.#follow);
+    if (this.#workTick) clearInterval(this.#workTick);
     this.#follow = null;
+    this.#workTick = null;
+  }
+
+  /** The orb follows its agent's actions on the attached window, and goes back to the corner after. */
+  #followWork(): void {
+    const work = this.#options.observedWork();
+    for (const bubble of this.#options.bubbles.snapshot().bubbles) {
+      const surface = bubble.attached;
+      if (!surface) continue;
+      const onThisWindow =
+        work && (work.windowId === surface.windowId || (work.windowId === null && work.pid === surface.pid));
+      if (!onThisWindow) {
+        if (this.#workingAt.delete(bubble.agentId)) this.#options.bubbles.workAt(bubble.agentId, null);
+        continue;
+      }
+      // A step with no point (typing, a key press) keeps the orb over the top of the window.
+      const point = work.point ?? {
+        x: surface.bounds.x + surface.bounds.width / 2,
+        y: surface.bounds.y + BUBBLE_LIMITS.orbSize + 24,
+      };
+      const last = this.#workingAt.get(bubble.agentId);
+      if (last && Math.hypot(last.x - point.x, last.y - point.y) < WORK_MOVE_MIN) continue;
+      this.#workingAt.set(bubble.agentId, point);
+      this.#options.bubbles.workAt(bubble.agentId, point);
+    }
   }
 
   #windows(): Effect.Effect<DesktopWindow[], unknown> {
@@ -207,6 +252,7 @@ export class BubbleAttachController {
     const attached = this.#options.bubbles.snapshot().bubbles.some((bubble) => bubble.attached);
     if (attached && !this.#follow) {
       this.#follow = setInterval(() => void Effect.runPromise(this.#followTick()), FOLLOW_INTERVAL_MS);
+      this.#workTick = setInterval(() => this.#followWork(), WORK_TICK_MS);
     } else if (!attached) this.stop();
   }
 

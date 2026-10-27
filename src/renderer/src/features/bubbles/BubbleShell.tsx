@@ -1,4 +1,4 @@
-import type { BubbleAttachIssue, CentralAuthUser } from "@openbot/contracts/ipc";
+import { BUBBLE_LIMITS, type BubbleAttachIssue, type CentralAuthUser } from "@openbot/contracts/ipc";
 import { computeAgentAvatarMoods } from "@openbot/ui/features/agents/agent-avatar-mood";
 import { BubbleNotice } from "@openbot/ui/features/bubbles/BubbleNotice";
 import { BubbleOrb, type BubbleOrbMotion } from "@openbot/ui/features/bubbles/BubbleOrb";
@@ -20,6 +20,7 @@ import { useConversation } from "../conversation/conversation-context";
 import { WorkspaceConversation } from "../conversation/WorkspaceConversation";
 import { attachedLabel } from "./bubble-attachment";
 import { createBubbleDrag } from "./bubble-drag";
+import { setBubbleChatHidden } from "./bubble-window";
 import { useBubbles } from "./bubbles-context";
 
 /** A resting orb hops now and then, at a random moment, so a desktop of orbs never moves in step. */
@@ -28,6 +29,10 @@ const HOP_MS = 1_000;
 /** A bubble visits others every 20–45 s, divided by how many others are out: a crowd mingles more. */
 const VISIT_DELAY_MS = { min: 20_000, max: 45_000 };
 const GREET_MS = 1_400;
+/** As long as the close animation (`--openbot-duration-overlay` in `bubbles.css`), so the orb comes back as it ends. */
+const CLOSE_MS = 240;
+/** The panel is prepared when the window is idle, and at the latest this long after the orb appears. */
+const PREPARE_PANEL_MS = 4_000;
 /** The flight over, the hover (4.5 s in main) and the flight home. */
 const NUDGE_MS = 5_500;
 
@@ -49,12 +54,50 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
   const { t } = useText();
   const platform = usePlatform();
   const { agentList } = useAgents();
-  const { activeTurns, queues, failedTurns, usageLimits, pendingPrompts, pendingApprovals, approvals } = useTurns();
-  const { unreadReplies, recentReplies } = useConversation();
+  const { activeTurns, queues, failedTurns, usageLimits, pendingPrompts, pendingApprovals, approvals, turnProgress } =
+    useTurns();
+  const { unreadReplies, recentReplies, conversations, requestConversationRead } = useConversation();
   const agent = createMemo(() => agentList().find((candidate) => candidate.id === props.agentId) ?? null);
   const state = () => bubbles.bubbleOf(props.agentId);
-  const expanded = () => state()?.expanded ?? false;
-  const label = () => attachedLabel(state()?.attached ?? null);
+  const savedExpanded = () => state()?.expanded ?? false;
+  // The panel is built once, while the orb idles, and then only shown and hidden: mounting the whole
+  // conversation at the click (or again to animate a close) stalled the window for about a second.
+  // A closing panel stays on screen while it shrinks back into the orb; the orb then takes its place.
+  const [panelReady, setPanelReady] = createSignal(false);
+  const [panelShown, setPanelShown] = createSignal(false);
+  const expanded = panelShown;
+  const closing = () => panelShown() && !savedExpanded();
+  /** Set while the prepared panel waits out of sight; `[hidden]` would take it out of layout. */
+  const panelHidden = () => (panelShown() ? undefined : "");
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
+  createEffect(savedExpanded, (open) => {
+    clearTimeout(closeTimer);
+    setBubbleChatHidden(!open);
+    if (open) {
+      setPanelShown(true);
+      // Opening the bubble is opening its chat: what arrived while it was an orb is now seen.
+      requestConversationRead(props.agentId, true);
+    } else closeTimer = setTimeout(() => setPanelShown(false), prefersReducedMotion() ? 0 : CLOSE_MS);
+  });
+  onSettled(() => {
+    const idle = requestIdleCallback(() => setPanelReady(true), { timeout: PREPARE_PANEL_MS });
+    return () => cancelIdleCallback(idle);
+  });
+  onCleanup(() => clearTimeout(closeTimer));
+  // The panel keeps its saved size while the window springs open or shut around it, so the growing
+  // window only reveals it: sized to the window, the whole conversation reflowed on every frame.
+  const panelSize = () => ({
+    "--bubble-panel-width": `${state()?.width ?? BUBBLE_LIMITS.expandedWidth}px`,
+    "--bubble-panel-height": `${state()?.height ?? BUBBLE_LIMITS.expandedHeight}px`,
+    "--bubble-screen-width": `${screen.availWidth}px`,
+    "--bubble-screen-height": `${screen.availHeight}px`,
+  });
+  // While an attached agent works, its chip says what it is doing right now; otherwise, where it is.
+  const label = () => {
+    const where = attachedLabel(state()?.attached ?? null);
+    const step = activeTurns()[props.agentId] ? turnProgress()[props.agentId]?.detail : undefined;
+    return where && step ? step : where;
+  };
   const character = () => bubbleCharacter(bubbles.characterOf(props.agentId));
   const [motion, setMotion] = createSignal<BubbleOrbMotion>("rest");
   const [lifted, setLifted] = createSignal(false);
@@ -152,6 +195,22 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
     },
   );
 
+  // Orbs call each other: when another agent hands this one work, this orb flies over to the caller's
+  // orb to answer, if the caller is popped out too.
+  let answeredTurn: string | null = null;
+  createEffect(
+    () => activeTurns()[props.agentId] ?? null,
+    (turnId) => {
+      if (!turnId || turnId === answeredTurn || expanded()) return;
+      answeredTurn = turnId;
+      const messages = conversations[props.agentId]?.messages ?? [];
+      const incoming = messages.at(-1);
+      const caller = incoming?.senderAgentId;
+      if (!caller || caller === props.agentId || !bubbles.bubbleOf(caller) || prefersReducedMotion()) return;
+      bubbles.visit(caller);
+    },
+  );
+
   // Bubbles mingle: now and then this one floats over to the others (main picks whom and moves it).
   onSettled(() => {
     let visitTimer: ReturnType<typeof setTimeout> | undefined;
@@ -216,9 +275,8 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
     <div class="bubble-window" data-platform={platform.appInfo()?.platform}>
       <Show when={agent()}>
         {(current) => (
-          <Show
-            when={expanded()}
-            fallback={
+          <>
+            <Show when={!panelShown()}>
               <BubbleOrb
                 agent={current()}
                 character={character()}
@@ -233,61 +291,70 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
                 onPointerUp={drag.pointerUp}
                 onClick={drag.click}
               />
-            }
-          >
-            <ConnectorsProvider>
-              <div class="bubble-panel">
-                <BubblePanelHeader
-                  agent={current()}
-                  character={character()}
-                  mood={mood()}
-                  attachedLabel={label()}
-                  onDetach={() => bubbles.detach(props.agentId)}
-                  onCollapse={() => bubbles.setExpanded(props.agentId, false)}
-                  onOpenMain={() => bubbles.focusMain(props.agentId)}
-                  onClose={() => bubbles.bringBack(props.agentId)}
-                />
-                <Show when={issue()}>
-                  {(current) => (
-                    <BubbleNotice
-                      message={t(ISSUE_TEXT[current()])}
-                      action={t(missingPermission() ? "bubbles.openSettings" : "bubbles.notNow")}
-                      onAction={() => {
-                        const permission = missingPermission();
-                        if (permission) bubbles.openPermissionPane(permission);
-                        bubbles.dismissIssue(props.agentId);
-                      }}
-                      dismiss={
-                        missingPermission()
-                          ? { label: t("bubbles.notNow"), onDismiss: () => bubbles.dismissIssue(props.agentId) }
-                          : undefined
-                      }
-                    />
-                  )}
-                </Show>
-                <Show when={!issue() && browserHost()}>
-                  {(host) => (
-                    <BubbleNotice
-                      message={t("bubbles.browserNotice", { host: host() })}
-                      action={t("bubbles.openInBrowser")}
-                      onAction={() => bubbles.openAttachedInBrowser(props.agentId)}
-                    />
-                  )}
-                </Show>
-                <Show when={!issue() && !browserHost() && takeoverWaiting()}>
-                  <BubbleNotice
-                    message={t("bubbles.takeoverNotice", { name: current().name })}
-                    action={t("bubbles.openBrowser")}
-                    onAction={() => bubbles.focusMain(props.agentId)}
+            </Show>
+            <Show when={panelReady() || panelShown()}>
+              <ConnectorsProvider>
+                <div
+                  class="bubble-panel"
+                  style={panelSize()}
+                  data-hidden={panelHidden()}
+                  inert={!panelShown()}
+                  data-closing={closing() ? "" : undefined}
+                >
+                  <BubblePanelHeader
+                    agent={current()}
+                    character={character()}
+                    mood={mood()}
+                    attachedLabel={label()}
+                    onDetach={() => bubbles.detach(props.agentId)}
+                    onCollapse={() => bubbles.setExpanded(props.agentId, false)}
+                    onOpenMain={() => bubbles.focusMain(props.agentId)}
+                    onClose={() => bubbles.bringBack(props.agentId)}
                   />
-                </Show>
-                <div class="bubble-panel-body">
-                  <WorkspaceConversation account={props.account} />
+                  <Show when={issue()}>
+                    {(current) => (
+                      <BubbleNotice
+                        message={t(ISSUE_TEXT[current()])}
+                        action={t(missingPermission() ? "bubbles.openSettings" : "bubbles.notNow")}
+                        onAction={() => {
+                          const permission = missingPermission();
+                          if (permission) bubbles.openPermissionPane(permission);
+                          bubbles.dismissIssue(props.agentId);
+                        }}
+                        dismiss={
+                          missingPermission()
+                            ? { label: t("bubbles.notNow"), onDismiss: () => bubbles.dismissIssue(props.agentId) }
+                            : undefined
+                        }
+                      />
+                    )}
+                  </Show>
+                  <Show when={!issue() && browserHost()}>
+                    {(host) => (
+                      <BubbleNotice
+                        message={t("bubbles.browserNotice", { host: host() })}
+                        action={t("bubbles.openInBrowser")}
+                        onAction={() => bubbles.openAttachedInBrowser(props.agentId)}
+                      />
+                    )}
+                  </Show>
+                  <Show when={!issue() && !browserHost() && takeoverWaiting()}>
+                    <BubbleNotice
+                      message={t("bubbles.takeoverNotice", { name: current().name })}
+                      action={t("bubbles.openBrowser")}
+                      onAction={() => bubbles.focusMain(props.agentId)}
+                    />
+                  </Show>
+                  <div class="bubble-panel-body">
+                    <WorkspaceConversation account={props.account} />
+                  </div>
                 </div>
-              </div>
-              <WorkspaceOverlays account={props.account} />
-            </ConnectorsProvider>
-          </Show>
+                <Show when={panelShown()}>
+                  <WorkspaceOverlays account={props.account} />
+                </Show>
+              </ConnectorsProvider>
+            </Show>
+          </>
         )}
       </Show>
     </div>

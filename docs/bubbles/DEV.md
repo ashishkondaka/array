@@ -55,6 +55,8 @@ start and logs `A provider changed state ... "to":"available"` for each.
   microtask) and ternary JSX props on the avatar. Pass a helper function (`hue={avatarHue()}`), never
   `hue={a ? b : c}`, to a component that reads the prop in an effect. Check the dev log for the halt
   after UI changes: `grep REACTIVITY_HALTED`.
+- Tailwind's preflight sets `[hidden] { display: none !important }`. To keep an element laid out while
+  hidden, use a data attribute with `visibility: hidden` and `inert`, as the bubble panel does.
 - The Codex doctor is Codex only. Use `bun run cua-driver:doctor` for Computer Use.
 - In dev, macOS grants Screen Recording and Accessibility to the Electron binary
   (`com.github.Electron`), shown as "Array" after `scripts/bubbles-dev-name.ts`. A packaged build

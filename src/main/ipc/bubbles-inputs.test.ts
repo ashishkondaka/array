@@ -3,7 +3,13 @@
 import { BUBBLE_LIMITS } from "@openbot/contracts/ipc";
 import { describe, expect, it } from "vitest";
 import { requireBubbleSender } from "./bubbles-handlers";
-import { parseBubbleAgentId, parseBubbleDragPoint, parseBubbleExpanded, parseBubbleHidden } from "./bubbles-inputs";
+import {
+  parseBubbleAgentId,
+  parseBubbleCaller,
+  parseBubbleDragPoint,
+  parseBubbleExpanded,
+  parseBubbleHidden,
+} from "./bubbles-inputs";
 
 describe("bubble payloads from the renderer", () => {
   it("accepts an agent id and rejects anything else", () => {
@@ -21,6 +27,14 @@ describe("bubble payloads from the renderer", () => {
     expect(() => parseBubbleExpanded({ agentId: "agent-1", expanded: "true" })).toThrow();
     expect(() => parseBubbleExpanded({ expanded: true })).toThrow();
     expect(() => parseBubbleExpanded(null)).toThrow();
+  });
+
+  it("reads a visit's caller as an agent id or none", () => {
+    expect(parseBubbleCaller("chief")).toBe("chief");
+    expect(parseBubbleCaller(null)).toBeNull();
+    expect(parseBubbleCaller(undefined)).toBeNull();
+    expect(() => parseBubbleCaller(7)).toThrow();
+    expect(() => parseBubbleCaller("")).toThrow();
   });
 
   it("accepts a boolean for hidden only", () => {

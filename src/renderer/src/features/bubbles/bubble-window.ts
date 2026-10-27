@@ -1,4 +1,5 @@
 import type { ChatWindowTarget } from "@openbot/contracts/ipc";
+import { createSignal } from "solid-js";
 
 /**
  * The agent of a bubble window (OpenBot Bubbles fork), or null in any other window. Main opens a
@@ -12,3 +13,14 @@ export function readBubbleWindowTarget(search: string): ChatWindowTarget | null 
   if (query.get("window") !== "bubble" || !serverId || !agentId) return null;
   return { serverId, agentId };
 }
+
+/**
+ * Whether this bubble's chat is out of sight: true while the bubble is an orb. Read state is per
+ * window, and a focused orb would otherwise mark a reply read that nobody saw. `WindowPageProvider`
+ * counts it as a covered conversation; `BubbleShell` updates it. Always false outside a bubble.
+ */
+const [bubbleChatHidden, setBubbleChatHidden] = createSignal(
+  typeof location !== "undefined" && readBubbleWindowTarget(location.search) !== null,
+);
+
+export { bubbleChatHidden, setBubbleChatHidden };

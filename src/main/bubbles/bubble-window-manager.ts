@@ -23,7 +23,15 @@ import { BrowserWindow, globalShortcut, Menu, type NativeImage, screen, Tray } f
 import { PreferenceStore } from "../preference-file";
 import { sendToRenderer } from "../renderer-ipc";
 import { isTrustedRendererUrl } from "../trusted-renderer";
-import { clampOrb, defaultOrbPosition, expandedBounds, orbSize, PANEL_OFFSET, separateOrb } from "./bubble-layout";
+import {
+  clampOrb,
+  defaultOrbPosition,
+  expandedBounds,
+  orbSize,
+  PANEL_OFFSET,
+  separateOrb,
+  workAreaFor,
+} from "./bubble-layout";
 import {
   BUMP_RESPONSE,
   bumpOffset,
@@ -93,6 +101,12 @@ interface OpenBubble {
   dwellAt: { x: number; y: number } | null;
   /** On a visit to other bubbles. */
   visiting: boolean;
+  /** The frame timer of an open or close in flight. */
+  morph: ReturnType<typeof setInterval> | null;
+  /** Whether the window was last laid out expanded, so a change of it is animated. */
+  shownExpanded: boolean;
+  /** Following the agent's own Computer Use actions over its attached window. */
+  working: boolean;
   lastVisitAt: number;
   /** Waiting beside the pointer to go home; a drag or a click there cancels the trip home. */
   homeTimer: ReturnType<typeof setTimeout> | null;
@@ -107,6 +121,10 @@ const DWELL_TOLERANCE = 24;
 const NUDGE_INTERVAL_MS = 60_000;
 /** A bubble visits at most this often; its renderer asks more often when more bubbles are out. */
 const VISIT_INTERVAL_MS = 15_000;
+/** The open and close spring: quick, with no overshoot, so the panel lands without a wobble. */
+const MORPH_RESPONSE = 0.32;
+/** How far from the agent's action point the orb hovers, so it never covers what is being done. */
+const WORK_OFFSET = 18;
 /** How long two bubbles stay together on a visit. */
 const VISIT_HOLD_MS = 2_600;
 /** How long the orb hovers over the app before it goes home. */
@@ -350,20 +368,25 @@ export class BubbleWindowManager {
    * part, and only while lively bubbles (the nudge setting) are on; the renderer skips it under
    * reduced motion. The saved home never changes.
    */
-  visit(agentId: string): void {
+  visit(agentId: string, caller: string | null = null): void {
     const open = this.#open.get(agentId);
     const bubble = this.#find(agentId);
     if (!open || !bubble || !this.#canWander(open, bubble)) return;
     const now = Date.now();
-    if (now - open.lastVisitAt < VISIT_INTERVAL_MS) return;
-    const partners = this.#state.bubbles
-      .filter((other) => other.agentId !== agentId)
-      .flatMap((other) => {
-        const partner = this.#open.get(other.agentId);
-        return partner && this.#canWander(partner, other) ? [other.agentId] : [];
-      })
-      .sort(() => Math.random() - 0.5)
-      .slice(0, Math.random() < 0.5 ? 2 : 1);
+    // A call from another agent is answered at once; a social visit waits its turn.
+    if (!caller && now - open.lastVisitAt < VISIT_INTERVAL_MS) return;
+    const calling = caller && caller !== agentId && this.#open.has(caller) ? [caller] : null;
+    if (caller && !calling) return;
+    const partners =
+      calling ??
+      this.#state.bubbles
+        .filter((other) => other.agentId !== agentId)
+        .flatMap((other) => {
+          const partner = this.#open.get(other.agentId);
+          return partner && this.#canWander(partner, other) ? [other.agentId] : [];
+        })
+        .sort(() => Math.random() - 0.5)
+        .slice(0, Math.random() < 0.5 ? 2 : 1);
     if (partners.length === 0) return;
     open.lastVisitAt = now;
     open.visiting = true;
@@ -403,6 +426,35 @@ export class BubbleWindowManager {
       );
     };
     next(0);
+  }
+
+  /**
+   * The orb plays around its agent's work: while the agent acts on the attached window, the orb
+   * floats to just above where it acts; `null` sends it back to the window's corner. Not saved.
+   */
+  workAt(agentId: string, point: { x: number; y: number } | null): void {
+    const open = this.#open.get(agentId);
+    const bubble = this.#find(agentId);
+    if (!open || !bubble || open.window.isDestroyed() || open.dragging || bubble.expanded || !bubble.attached) return;
+    if (!point) {
+      if (!open.working) return;
+      this.#travel(agentId, bubble, () => (open.working = false));
+      return;
+    }
+    open.working = true;
+    const size = orbSize(bubble);
+    const area = workAreaFor({ ...point, width: 1, height: 1 }, this.#workAreas());
+    // The orb (at the right end of the attached window) sits just above and right of the action.
+    const x = point.x + WORK_OFFSET - (size.width - BUBBLE_LIMITS.orbSize);
+    const y = point.y - BUBBLE_LIMITS.orbSize - WORK_OFFSET;
+    this.#travel(
+      agentId,
+      {
+        x: Math.round(Math.min(Math.max(x, area.x), area.x + area.width - size.width)),
+        y: Math.round(Math.min(Math.max(y, area.y), area.y + area.height - size.height)),
+      },
+      () => undefined,
+    );
   }
 
   /** Free to wander: shown, collapsed, unattached, not held, not already on a trip. */
@@ -616,7 +668,8 @@ export class BubbleWindowManager {
       bubbles: this.#state.bubbles.map((bubble) => (bubble.agentId === agentId ? next : bubble)),
     };
     const open = this.#open.get(agentId);
-    if (open && !open.dragging) this.#applyBounds(open, next);
+    // A drag or work in progress holds the window where it is; it settles when they end.
+    if (open && !open.dragging && !open.working) this.#applyBounds(open, next);
     this.#afterChange(true);
   }
 
@@ -650,14 +703,65 @@ export class BubbleWindowManager {
     if (open.window.isDestroyed()) return;
     open.window.setResizable(bubble.expanded);
     open.window.setHasShadow(bubble.expanded);
-    if (bubble.expanded) {
-      open.window.setMinimumSize(BUBBLE_LIMITS.minExpandedWidth, BUBBLE_LIMITS.minExpandedHeight);
-      open.window.setMaximumSize(BUBBLE_LIMITS.maxExpandedWidth, BUBBLE_LIMITS.maxExpandedHeight);
-    } else {
-      open.window.setMinimumSize(1, 1);
-      open.window.setMaximumSize(BUBBLE_LIMITS.maxExpandedWidth, BUBBLE_LIMITS.maxExpandedHeight);
+    const maxWidth = BUBBLE_LIMITS.maxExpandedWidth + PANEL_OFFSET.x;
+    const maxHeight = BUBBLE_LIMITS.maxExpandedHeight + PANEL_OFFSET.y;
+    open.window.setMaximumSize(maxWidth, maxHeight);
+    open.window.setMinimumSize(1, 1);
+    const target = this.#boundsFor(bubble);
+    const opening = bubble.expanded !== open.shownExpanded;
+    open.shownExpanded = bubble.expanded;
+    if (!opening) {
+      this.#setBounds(open, target);
+      this.#settleSizeLimits(open, bubble);
+      return;
     }
-    this.#setBounds(open, this.#boundsFor(bubble));
+    // Open and close as one liquid motion: the frame grows out of (or shrinks into) the orb's corner on
+    // a spring, at the display rate, while the page morphs the panel out of the orb's circle.
+    this.#morphBounds(open, target, () => this.#settleSizeLimits(open, bubble));
+  }
+
+  #settleSizeLimits(open: OpenBubble, bubble: BubbleState): void {
+    if (open.window.isDestroyed() || !bubble.expanded) return;
+    open.window.setMinimumSize(
+      BUBBLE_LIMITS.minExpandedWidth + PANEL_OFFSET.x,
+      BUBBLE_LIMITS.minExpandedHeight + PANEL_OFFSET.y,
+    );
+  }
+
+  /** Animates the whole frame (position and size) on the spring, without saving anything. */
+  #morphBounds(open: OpenBubble, to: BubbleBounds, done: () => void): void {
+    if (open.window.isDestroyed()) return;
+    if (open.morph) clearInterval(open.morph);
+    const from = open.window.getBounds();
+    const axes = (["x", "y", "width", "height"] as const).map((key) => ({
+      key,
+      state: { position: from[key], velocity: 0 } satisfies SpringState,
+    }));
+    let last = performance.now();
+    open.morph = setInterval(() => {
+      if (open.window.isDestroyed()) {
+        if (open.morph) clearInterval(open.morph);
+        return;
+      }
+      const now = performance.now();
+      const seconds = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      for (const axis of axes) axis.state = springStep(axis.state, to[axis.key], seconds, MORPH_RESPONSE);
+      const settled = axes.every((axis) => springSettled(axis.state, to[axis.key]));
+      const frame = Object.fromEntries(
+        axes.map((axis) => [axis.key, settled ? to[axis.key] : Math.round(axis.state.position)]),
+      );
+      this.#setBounds(open, {
+        x: frame.x ?? to.x,
+        y: frame.y ?? to.y,
+        width: Math.max(1, frame.width ?? to.width),
+        height: Math.max(1, frame.height ?? to.height),
+      });
+      if (!settled) return;
+      if (open.morph) clearInterval(open.morph);
+      open.morph = null;
+      done();
+    }, frameInterval(to));
   }
 
   #openWindow(bubble: BubbleState): void {
@@ -694,6 +798,9 @@ export class BubbleWindowManager {
       homeTimer: null,
       lastNudgeAt: 0,
       visiting: false,
+      morph: null,
+      shownExpanded: bubble.expanded,
+      working: false,
       lastVisitAt: 0,
       dwellTimer: null,
       dwellAt: null,
@@ -717,22 +824,24 @@ export class BubbleWindowManager {
     // through main, which saves its own moves, so a late `moved` from one of those is ignored.
     window.on("moved", () => {
       if (open.settingBounds || open.dragging || !this.#find(bubble.agentId)?.expanded) return;
-      const [left = 0, top = 0] = window.getPosition();
-      // The saved corner is the orb's; the panel sits at an offset from it.
-      const x = left - PANEL_OFFSET.x;
-      const y = top - PANEL_OFFSET.y;
+      const [x = 0, y = 0] = window.getPosition();
+      // The window's corner is the orb's corner, expanded or not.
       this.#updateSilently(bubble.agentId, (current) => ({ ...current, x, y }));
     });
     window.on("resized", () => {
       const current = this.#find(bubble.agentId);
       if (open.settingBounds || !current?.expanded) return;
-      const [width = current.width, height = current.height] = window.getSize();
+      const [outerWidth = current.width + PANEL_OFFSET.x, outerHeight = current.height + PANEL_OFFSET.y] =
+        window.getSize();
+      const width = outerWidth - PANEL_OFFSET.x;
+      const height = outerHeight - PANEL_OFFSET.y;
       this.#updateSilently(bubble.agentId, (state) => ({ ...state, width, height }));
     });
     window.on("closed", () => {
       if (open.nudge) clearInterval(open.nudge);
       if (open.homeTimer) clearTimeout(open.homeTimer);
       if (open.dwellTimer) clearTimeout(open.dwellTimer);
+      if (open.morph) clearInterval(open.morph);
       if (this.#open.get(bubble.agentId)?.window !== window) return;
       // A quit closes every window; the bubbles must come back on the next start.
       if (this.#options.isQuitting() || this.#destroyed) {

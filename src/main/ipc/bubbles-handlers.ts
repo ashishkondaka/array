@@ -9,6 +9,7 @@ import type { BubbleWindowManager } from "../bubbles/bubble-window-manager";
 import {
   parseBubbleAgentId,
   parseBubbleAttachOnRelease,
+  parseBubbleCaller,
   parseBubbleCharacter,
   parseBubbleDragPoint,
   parseBubbleExpanded,
@@ -54,7 +55,9 @@ export function bubblesIpcHandlers({ bubbles, attach }: BubblesIpcDependencies):
       ),
       setNudges: payloadHandler(parseBubbleNudges, (nudges) => bubbles.setNudges(nudges)),
       nudge: eventHandler((event) => bubbles.nudge(requireBubbleSender(bubbles, event.sender.id))),
-      visit: eventHandler((event) => bubbles.visit(requireBubbleSender(bubbles, event.sender.id))),
+      visit: authorizedHandler(fromBubble, parseBubbleCaller, (event, caller) =>
+        bubbles.visit(requireBubbleSender(bubbles, event.sender.id), caller),
+      ),
       detach: payloadHandler(parseBubbleAgentId, (agentId) => attach()?.detach(agentId)),
       openAttachedInBrowser: payloadHandler(parseBubbleAgentId, (agentId) => {
         const controller = attach();

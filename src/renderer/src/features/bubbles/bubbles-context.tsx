@@ -91,7 +91,8 @@ const Bubbles = createSimpleContext({
       hintOf: (agentId: string) => state.hints[agentId] ?? null,
       greetsOf: (agentId: string) => state.greets[agentId] ?? 0,
       bubbleCount: () => state.snapshot.bubbles.length,
-      visit: () => send(port().visit()),
+      /** A social visit, or with an agent id, answering that agent's call. */
+      visit: (caller: string | null = null) => send(port().visit(caller)),
       dismissIssue: (agentId: string) =>
         setState((draft) => {
           draft.issues[agentId] = undefined;

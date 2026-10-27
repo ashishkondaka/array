@@ -38,8 +38,12 @@ html[data-bubble-window] body {
   display: flex;
   align-items: center;
   gap: var(--openbot-space-2);
-  /* Centred in the orb window; an attached orb sits at the right end with its chip to its left. */
-  margin: auto;
+  /* Pinned to the window's corner, which is the orb's corner whether the window is an orb or a panel,
+   * so opening and closing never make the orb jump. An attached orb sits at the right end instead,
+   * with its chip to its left. */
+  position: absolute;
+  top: 0;
+  left: 0;
   padding: var(--openbot-space-1);
   /* It appears from nothing, so it grows in place rather than sliding from anywhere. */
   animation: bubble-orb-in var(--openbot-duration-normal) var(--openbot-ease-out) both;
@@ -73,8 +77,9 @@ html[data-bubble-window] body {
 }
 
 .bubble-orb-frame[data-attached] {
+  right: 0;
+  left: auto;
   flex-direction: row-reverse;
-  margin: auto 0 auto auto;
 }
 
 /* The character's own layer: hops and wiggles move it, never the glass around it. Only transform
@@ -339,11 +344,25 @@ html[data-bubble-window] body {
 
 /* ── Expanded panel ──────────────────────────────────────────────────────── */
 
+/* The panel sits inside the window at the offset that puts its header avatar on the orb's centre
+ * (`PANEL_OFFSET` in main: 8pt and 12pt). */
 .bubble-panel {
-  position: relative;
+  --bubble-orb-centre-x: calc(var(--bubble-orb-size) / 2 + var(--openbot-space-1) - var(--openbot-space-2));
+  --bubble-orb-centre-y: calc(var(--bubble-orb-size) / 2 + var(--openbot-space-1) - var(--openbot-space-3));
+  position: absolute;
+  top: var(--openbot-space-3);
+  left: var(--openbot-space-2);
+  /* At least the saved size, so the window springs open and shut around a panel that does not
+     reflow; larger while the user drags the window bigger. Never larger than the screen. */
+  width: min(
+    max(var(--bubble-panel-width), calc(100% - var(--openbot-space-2))),
+    calc(var(--bubble-screen-width) - var(--openbot-space-2))
+  );
+  height: min(
+    max(var(--bubble-panel-height), calc(100% - var(--openbot-space-3))),
+    calc(var(--bubble-screen-height) - var(--openbot-space-3))
+  );
   display: flex;
-  width: 100%;
-  height: 100%;
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
@@ -352,17 +371,41 @@ html[data-bubble-window] body {
   box-shadow:
     inset 0 1px 0 var(--bubble-glass-rim),
     inset 0 0 0 1px var(--bubble-glass-rim-soft);
-  /* It grows out of the orb's corner, the way it will fold back into it, and arrives as a
-   * material: blur and scale settle together. */
-  transform-origin: top left;
-  animation: bubble-materialize var(--openbot-duration-normal) var(--openbot-ease-out) both;
+  /* Liquid open: the panel grows out of the orb's circle while main grows the window frame on the
+   * same spring. A clip-path animation runs on the compositor, so it keeps the display rate. */
+  animation: bubble-panel-open calc(var(--openbot-duration-slow) * 1.5) var(--openbot-ease-out) both;
 }
 
-@keyframes bubble-materialize {
+/* A prepared panel stays laid out while hidden, so showing it is a paint: with `display: none` the
+   chat's virtualizer laid the whole conversation out at the click. It draws nothing meanwhile, and
+   `inert` keeps input and focus out of it. */
+.bubble-panel[data-hidden] {
+  visibility: hidden;
+  animation: none;
+}
+
+.bubble-panel[data-closing] {
+  animation: bubble-panel-close var(--openbot-duration-overlay) var(--openbot-ease-in-out) both;
+  pointer-events: none;
+}
+
+@keyframes bubble-panel-open {
   from {
-    filter: blur(var(--openbot-space-1));
-    opacity: 0;
-    transform: scale(0.96);
+    clip-path: circle(calc(var(--bubble-orb-size) / 2) at var(--bubble-orb-centre-x) var(--bubble-orb-centre-y));
+  }
+
+  to {
+    clip-path: circle(150% at var(--bubble-orb-centre-x) var(--bubble-orb-centre-y));
+  }
+}
+
+@keyframes bubble-panel-close {
+  from {
+    clip-path: circle(150% at var(--bubble-orb-centre-x) var(--bubble-orb-centre-y));
+  }
+
+  to {
+    clip-path: circle(calc(var(--bubble-orb-size) / 2) at var(--bubble-orb-centre-x) var(--bubble-orb-centre-y));
   }
 }
 
@@ -486,7 +529,8 @@ html[data-bubble-window="collapsed"] [data-sonner-toaster] {
 
 @media (prefers-reduced-motion: reduce) {
   .bubble-orb-frame,
-  .bubble-panel {
+  .bubble-panel,
+  .bubble-panel[data-closing] {
     animation: bubble-fade var(--openbot-duration-fast) linear both;
   }
 

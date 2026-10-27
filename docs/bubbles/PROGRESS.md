@@ -224,6 +224,23 @@ User requests in Phase 5:
 - Fixed a window freeze: ternary props on the avatar (`mood={a ? b : c}`) compile to memo-creating
   getters that the avatar reads in an effect, which halts the window under Solid 2 RC (the orbs
   stopped expanding). They are plain helper functions now; 90 s of visits ran with no halt.
+- Live attach test (dev run from Terminal, which holds the grants): Option-drop on TextEdit showed
+  "Release to attach to TextEdit", attached, snapped to the window corner; the agent described the
+  window and typed into it. The browser handoff was not run: Safari stayed behind another window.
+- A live agent: while an attached agent acts, the orb follows its Computer Use action point (120 ms
+  tick on the driver tap, 16 pt dead zone) and goes back to the corner 2.5 s after the last action;
+  the orb's chip shows the current step. The attached-window block tells the agent to work in the
+  background (element tokens, background typing, no `bring_to_front`) and to read the window fresh
+  before each action. When one agent messages another, the caller's orb flies to the callee's.
+- Liquid open and close: the window's corner stays at the orb's corner and the frame springs
+  (response 0.32 s) between orb and panel size, while the panel's `clip-path` grows from the orb's
+  circle. The panel is prepared while the orb idles and then only shown and hidden, at its saved
+  size: before, a close unmounted and remounted the conversation (a 1 s stall), and an open laid the
+  whole conversation out at the click and reflowed it on every frame of the growing window. Frame
+  trace of an open and close: longest frame 1 s → 28–34 ms (two at the start of the open, native
+  resize and first glass paint, dev build), JS at the click 90 ms → 2 ms. Idle CPU unchanged.
+- A collapsed bubble no longer marks replies read: read state is per window, and a focused orb
+  counted as an open chat. Opening the bubble marks them read.
 
 Rebase: `git fetch upstream` found no new commits on `upstream/main` (still `f91535fb0`), so the
 branches need no rebase today. To rebase later: `git fetch upstream && git rebase upstream/main` on

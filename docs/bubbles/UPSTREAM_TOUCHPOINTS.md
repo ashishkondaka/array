@@ -91,3 +91,9 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | `packages/contracts/src/app-appearance.ts` | `DEFAULT_TRANSPARENT_WINDOW = true` |
 | `packages/i18n/src/messages/en/window.ts` | native window titles say Array |
 | `src/renderer/src/styles.css` | import `array-glass.css` after `window-glass.css` |
+
+## Phase 5: polish
+
+| File | Hook |
+| --- | --- |
+| `src/renderer/src/features/window/window-page-context.tsx` | `conversationCovered` is also true while a bubble is an orb, so a reply nobody saw stays unread |

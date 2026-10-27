@@ -31,6 +31,14 @@ export function attachedWindowBlock(surface: AttachedSurface): string {
     `computer_use tool get_window_state with pid ${surface.pid} and window_id ${surface.windowId}; it returns`,
     "the screenshot and the accessibility tree. Act only in this window, with Computer Use tools",
     "scoped to this pid and window_id. Do not move to other windows or apps unless the user asks.",
+    "Work in the background: the user keeps using their screen while you act. Use element actions",
+    "(element_token from get_window_state) and type_text with the default background delivery. Do not",
+    "call bring_to_front or launch_app, and use delivery_mode foreground only when a fresh snapshot shows",
+    "that a background attempt did not land; say so when you do.",
+    "Place the caret before you type: select or click the exact spot (for the end of a document, the",
+    "end of its text area's value), then type, then check the result in a fresh get_window_state.",
+    "The window is live: the user may change it while you work. Take a fresh get_window_state before",
+    "each action, never act on an old snapshot, and mention what changed if it affects the task.",
   ];
   if (surface.browserUrl) {
     lines.push(

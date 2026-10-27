@@ -129,10 +129,22 @@ The orb does not use `-webkit-app-region: drag`, because a drag region swallows 
 expands it. The orb sends pointer positions (`bubbles.dragTo`, coalesced per animation frame) and
 `bubbles.dragEnd(attach)`; main moves the window with `setPosition`. A press that moves less than
 4 pt is a click. A release is a placement exactly where the pointer let go: no momentum, no snapping.
-The expanded panel header is a drag region; main saves the panel's corner minus `PANEL_OFFSET`.
+The expanded panel header is a drag region; main saves the window's corner, which is the orb's.
 
-Expanding opens the panel at `PANEL_OFFSET` from the orb's corner, so the header's avatar button is
-where the orb's centre was: a second click in place closes it.
+### Open and close
+
+The window's top-left corner is the orb's in both states. Opening springs the window frame from orb
+size to panel size plus `PANEL_OFFSET` (`#morphBounds`, response 0.32 s, ticked at the display rate)
+while the panel's `clip-path` grows from the orb's circle; closing runs both back. The panel sits at
+`PANEL_OFFSET` inside the window, so its header avatar is where the orb's centre was: a second click
+in place closes it.
+
+`BubbleShell` builds the panel once, on the first idle callback after the orb appears, and from then
+on only shows and hides it (`data-hidden`: `visibility: hidden` plus `inert`, never `display: none`,
+which Tailwind's `[hidden]` rule forces). The panel keeps its saved size while the window springs
+around it. Both keep the conversation's virtualizer from laying out and measuring every message at
+the click or on each frame. While the bubble is an orb, `bubbleChatHidden()` marks its chat covered,
+so read tracking treats it as closed.
 
 ### Motion
 
