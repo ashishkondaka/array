@@ -1,3 +1,13 @@
+# Array
+
+Array is a personal, noncommercial fork of [OpenBot](https://github.com/nightly-labs/openbot)
+(nightly-labs). Agents live in always-on-top bubbles on the desktop, attach to other apps' windows,
+go to the app they are asked about, and the window is drawn with Liquid Glass. The fork's own code is
+under `src/*/bubbles`, `packages/ui/src/features/bubbles` and `docs/bubbles`;
+[UPSTREAM_TOUCHPOINTS.md](docs/bubbles/UPSTREAM_TOUCHPOINTS.md) lists every edit to upstream files.
+Install: [docs/bubbles/INSTALL.md](docs/bubbles/INSTALL.md). Design: [ARCHITECTURE.md](docs/bubbles/ARCHITECTURE.md).
+License: PolyForm Noncommercial 1.0.0, as upstream. The rest of this file is OpenBot's README.
+
 # OpenBot
 
 [![CI](https://github.com/nightly-labs/openbot/actions/workflows/ci.yml/badge.svg)](https://github.com/nightly-labs/openbot/actions/workflows/ci.yml)
