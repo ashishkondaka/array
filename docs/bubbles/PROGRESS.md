@@ -331,6 +331,24 @@ the Dock (the middle of the Dock strip; the driver has no icon positions), pause
 the window's corner and attaches. Unit tests: `go-to-app.test.ts` (app matching, window choice,
 `list_apps` parsing, Dock stop on three edges and hidden). Narrow checks: `typecheck:node`, Biome.
 
+Live, on the dev app with Chief (claude-haiku-5-5), messages sent over CDP into the bubble's
+composer, the orb's position read from its page every few seconds:
+- "go to the Terminal app and tell me the title of its front window": the open panel (388 × 572)
+  closed, the orb flew to the Terminal window's corner (725, 402) and attached (the 280 px attached
+  orb), and Chief answered with the window's title from `get_window_state`. 2 steps, 11 s.
+- "read my mail" (Mail on another Space, full screen): the first run, before the text fix, had
+  Chief ask the user to open the inbox. After the fix it tried `bring_to_front` and `launch_app`
+  itself (12 steps, 1 failed) and still found no Mail window on this screen. The screen was locked
+  during the test (`CGSSessionScreenIsLocked`), and macOS does not bring another Space's window
+  forward while locked; the Terminal window was already on the current Space. Not verified: the
+  Mail journey on an unlocked Mac, and whether the full-screen Space switch lands the orb on it
+  (the bubble windows are visible on all Spaces and in full screen, so it should).
+- A main-process or backend edit, and Biome reformatting one, restarts Electron and `dev-services`
+  then stops the stack; each test run here needed `bun run dev` started again from Terminal.
+
+The DMG was rebuilt from the committed tree with the feature: `verify:package` and the deep, strict
+signature check pass, and the main bundle holds `go_to_app` and the `<openbot_desktop>` block.
+
 ## Status against the definition of done
 
 | Item | State |
