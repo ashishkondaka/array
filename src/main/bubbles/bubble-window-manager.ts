@@ -23,8 +23,19 @@ import { BrowserWindow, globalShortcut, Menu, type NativeImage, screen, Tray } f
 import { PreferenceStore } from "../preference-file";
 import { sendToRenderer } from "../renderer-ipc";
 import { isTrustedRendererUrl } from "../trusted-renderer";
-import { clampOrb, defaultOrbPosition, expandedBounds, orbSize, separateOrb } from "./bubble-layout";
-import { NUDGE_MIN_DISTANCE, nudgeTarget, type SpringState, springSettled, springStep } from "./bubble-motion";
+import { clampOrb, defaultOrbPosition, expandedBounds, orbSize, PANEL_OFFSET, separateOrb } from "./bubble-layout";
+import {
+  BUMP_RESPONSE,
+  bumpOffset,
+  DEFAULT_RESPONSE,
+  NUDGE_MIN_DISTANCE,
+  nudgeTarget,
+  type SpringState,
+  springSettled,
+  springStep,
+  VISIT_RESPONSE,
+  visitSpot,
+} from "./bubble-motion";
 import { BUBBLES_STATE_FILE, copyBubble, decodeBubblesFile, EMPTY_BUBBLES, newBubble } from "./bubble-state-file";
 import { setBubbleWindowSource } from "./bubble-window-registry";
 
@@ -80,6 +91,9 @@ interface OpenBubble {
   dwellTimer: ReturnType<typeof setTimeout> | null;
   /** Where the orb was when it rested, so a small tremor does not disarm. */
   dwellAt: { x: number; y: number } | null;
+  /** On a visit to other bubbles. */
+  visiting: boolean;
+  lastVisitAt: number;
   /** Waiting beside the pointer to go home; a drag or a click there cancels the trip home. */
   homeTimer: ReturnType<typeof setTimeout> | null;
   lastNudgeAt: number;
@@ -91,6 +105,10 @@ const DWELL_MS = 250;
 const DWELL_TOLERANCE = 24;
 /** One nudge a minute at most for each orb: a nudge that repeats is noise. */
 const NUDGE_INTERVAL_MS = 60_000;
+/** A bubble visits at most this often; its renderer asks more often when more bubbles are out. */
+const VISIT_INTERVAL_MS = 15_000;
+/** How long two bubbles stay together on a visit. */
+const VISIT_HOLD_MS = 2_600;
 /** How long the orb hovers over the app before it goes home. */
 const NUDGE_HOLD_MS = 4_500;
 /** The orb moves once per display frame: 8.3 ms on a 120 Hz display, never slower than 60 Hz. */
@@ -295,7 +313,8 @@ export class BubbleWindowManager {
   nudge(agentId: string): void {
     const open = this.#open.get(agentId);
     const bubble = this.#find(agentId);
-    if (!open || !bubble || open.window.isDestroyed() || open.dragging || open.nudge || open.homeTimer) return;
+    if (!open || !bubble || open.window.isDestroyed() || open.dragging || open.nudge || open.homeTimer || open.visiting)
+      return;
     if (!this.#state.nudges || this.#state.hidden || bubble.expanded || bubble.attached) return;
     const now = Date.now();
     if (now - open.lastNudgeAt < NUDGE_INTERVAL_MS) return;
@@ -324,8 +343,106 @@ export class BubbleWindowManager {
     });
   }
 
+  /**
+   * Bubbles mingle: the orb floats over to one or two other orbs, they greet (each plays "greet") and
+   * the one it reaches gives way with a small bump, then it floats home. More bubbles on screen means
+   * more visits, because each one asks on its own timer. Only collapsed, unattached, idle orbs take
+   * part, and only while lively bubbles (the nudge setting) are on; the renderer skips it under
+   * reduced motion. The saved home never changes.
+   */
+  visit(agentId: string): void {
+    const open = this.#open.get(agentId);
+    const bubble = this.#find(agentId);
+    if (!open || !bubble || !this.#canWander(open, bubble)) return;
+    const now = Date.now();
+    if (now - open.lastVisitAt < VISIT_INTERVAL_MS) return;
+    const partners = this.#state.bubbles
+      .filter((other) => other.agentId !== agentId)
+      .flatMap((other) => {
+        const partner = this.#open.get(other.agentId);
+        return partner && this.#canWander(partner, other) ? [other.agentId] : [];
+      })
+      .sort(() => Math.random() - 0.5)
+      .slice(0, Math.random() < 0.5 ? 2 : 1);
+    if (partners.length === 0) return;
+    open.lastVisitAt = now;
+    open.visiting = true;
+    open.window.showInactive();
+    const goHome = () => {
+      const home = this.#find(agentId);
+      if (!home || home.expanded) {
+        open.visiting = false;
+        return;
+      }
+      this.#travel(agentId, home, () => (open.visiting = false), VISIT_RESPONSE);
+    };
+    const next = (index: number) => {
+      const partnerId = partners[index];
+      const partner = partnerId ? this.#open.get(partnerId) : undefined;
+      if (!partnerId || !partner || partner.window.isDestroyed() || !open.visiting) {
+        goHome();
+        return;
+      }
+      const [px = 0, py = 0] = partner.window.getPosition();
+      const [vx = 0, vy = 0] = open.window.getPosition();
+      const spot = visitSpot({ x: vx, y: vy }, { x: px, y: py }, this.#workAreas(), Math.random() * 2 - 1);
+      this.#travel(
+        agentId,
+        spot,
+        () => {
+          if (!open.visiting) return;
+          this.#cue(agentId);
+          this.#cue(partnerId);
+          this.#bump(partnerId, spot);
+          open.homeTimer = setTimeout(() => {
+            open.homeTimer = null;
+            next(index + 1);
+          }, VISIT_HOLD_MS);
+        },
+        VISIT_RESPONSE,
+      );
+    };
+    next(0);
+  }
+
+  /** Free to wander: shown, collapsed, unattached, not held, not already on a trip. */
+  #canWander(open: OpenBubble, bubble: BubbleState): boolean {
+    return (
+      !open.window.isDestroyed() &&
+      this.#state.nudges &&
+      !this.#state.hidden &&
+      !bubble.expanded &&
+      !bubble.attached &&
+      !open.dragging &&
+      !open.visiting &&
+      !open.nudge &&
+      !open.homeTimer
+    );
+  }
+
+  /** The visited orb is pushed a little away from the visitor and springs back home. */
+  #bump(agentId: string, from: { x: number; y: number }): void {
+    const open = this.#open.get(agentId);
+    const bubble = this.#find(agentId);
+    if (!open || !bubble || open.window.isDestroyed() || open.dragging || open.nudge || bubble.expanded) return;
+    const push = bumpOffset(from, bubble);
+    this.#travel(
+      agentId,
+      { x: bubble.x + push.x, y: bubble.y + push.y },
+      () => {
+        const home = this.#find(agentId);
+        if (home && !home.expanded && !open.dragging) this.#travel(agentId, home, () => undefined);
+      },
+      BUMP_RESPONSE,
+    );
+  }
+
+  #cue(agentId: string): void {
+    sendToRenderer(this.#open.get(agentId)?.window, IPC_ENDPOINTS.bubbles.motionCue, { agentId, cue: "greet" });
+  }
+
   /** Moves a collapsed orb to `to` on the spring, frame by frame, without saving the position. */
-  #travel(agentId: string, to: { x: number; y: number }, done: () => void): void {
+  #travel(agentId: string, to: { x: number; y: number }, done: () => void, response: number = DEFAULT_RESPONSE): void {
     const open = this.#open.get(agentId);
     if (!open || open.window.isDestroyed()) return;
     const [startX = to.x, startY = to.y] = open.window.getPosition();
@@ -344,8 +461,8 @@ export class BubbleWindowManager {
       const now = performance.now();
       const seconds = Math.min(0.05, (now - last) / 1000);
       last = now;
-      x = springStep(x, to.x, seconds);
-      y = springStep(y, to.y, seconds);
+      x = springStep(x, to.x, seconds, response);
+      y = springStep(y, to.y, seconds, response);
       const settled = springSettled(x, to.x) && springSettled(y, to.y);
       this.#setBounds(open, {
         x: settled ? to.x : Math.round(x.position),
@@ -362,11 +479,12 @@ export class BubbleWindowManager {
   /** Cancels a nudge in flight or waiting, and puts the orb back at its saved place unless a drag has it. */
   #stopNudge(agentId: string, restore = true): void {
     const open = this.#open.get(agentId);
-    if (!open || (!open.nudge && !open.homeTimer)) return;
+    if (!open || (!open.nudge && !open.homeTimer && !open.visiting)) return;
     if (open.nudge) clearInterval(open.nudge);
     if (open.homeTimer) clearTimeout(open.homeTimer);
     open.nudge = null;
     open.homeTimer = null;
+    open.visiting = false;
     const bubble = this.#find(agentId);
     if (restore && bubble && !open.window.isDestroyed()) this.#applyBounds(open, bubble);
   }
@@ -565,6 +683,8 @@ export class BubbleWindowManager {
       nudge: null,
       homeTimer: null,
       lastNudgeAt: 0,
+      visiting: false,
+      lastVisitAt: 0,
       dwellTimer: null,
       dwellAt: null,
     };
@@ -587,7 +707,10 @@ export class BubbleWindowManager {
     // through main, which saves its own moves, so a late `moved` from one of those is ignored.
     window.on("moved", () => {
       if (open.settingBounds || open.dragging || !this.#find(bubble.agentId)?.expanded) return;
-      const [x = 0, y = 0] = window.getPosition();
+      const [left = 0, top = 0] = window.getPosition();
+      // The saved corner is the orb's; the panel sits at an offset from it.
+      const x = left - PANEL_OFFSET.x;
+      const y = top - PANEL_OFFSET.y;
       this.#updateSilently(bubble.agentId, (current) => ({ ...current, x, y }));
     });
     window.on("resized", () => {

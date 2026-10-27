@@ -66,8 +66,19 @@ export function clampOrb(state: BubbleState, workAreas: readonly BubbleBounds[])
  * The expanded panel opens from the orb's top-left corner and moves left or up only as far as it
  * must to fit the display, so the orb stays where the user put it.
  */
+/**
+ * Where the panel opens relative to the orb's corner, so the avatar button in the panel header lands
+ * on the orb's centre: the click that opened the panel, repeated in place, closes it. The header
+ * avatar button is 40pt wide at 8pt from the left, in a 48pt header (see `bubbles.css`); the orb's
+ * centre is half the orb size in from its corner.
+ */
+export const PANEL_OFFSET = {
+  x: BUBBLE_LIMITS.orbSize / 2 - (8 + 40 / 2),
+  y: BUBBLE_LIMITS.orbSize / 2 - 48 / 2,
+} as const;
+
 export function expandedBounds(state: BubbleState, workAreas: readonly BubbleBounds[]): BubbleBounds {
-  const rect = { x: state.x, y: state.y, width: state.width, height: state.height };
+  const rect = { x: state.x + PANEL_OFFSET.x, y: state.y + PANEL_OFFSET.y, width: state.width, height: state.height };
   return clampInto(rect, workAreaFor({ x: state.x, y: state.y, ...orbSize(state) }, workAreas));
 }
 

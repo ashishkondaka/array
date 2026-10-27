@@ -25,6 +25,9 @@ import { useBubbles } from "./bubbles-context";
 /** A resting orb hops now and then, at a random moment, so a desktop of orbs never moves in step. */
 const HOP_DELAY_MS = { min: 25_000, max: 55_000 };
 const HOP_MS = 1_000;
+/** A bubble visits others every 20–45 s, divided by how many others are out: a crowd mingles more. */
+const VISIT_DELAY_MS = { min: 20_000, max: 45_000 };
+const GREET_MS = 1_400;
 /** The flight over, the hover (4.5 s in main) and the flight home. */
 const NUDGE_MS = 5_500;
 
@@ -56,6 +59,10 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
   const [motion, setMotion] = createSignal<BubbleOrbMotion>("rest");
   const [lifted, setLifted] = createSignal(false);
   const hint = () => bubbles.hintOf(props.agentId);
+  const attachHintText = () => {
+    const app = hint();
+    return app ? t("bubbles.attachHint", { app }) : null;
+  };
   // Carrying and arming win over the ambient motions.
   const orbMotion = (): BubbleOrbMotion => (lifted() ? (hint() ? "armed" : "lift") : motion());
 
@@ -134,6 +141,39 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
     },
   );
 
+  // Main cues a greet when this bubble meets another on a visit.
+  let greetsSeen = bubbles.greetsOf(props.agentId);
+  createEffect(
+    () => bubbles.greetsOf(props.agentId),
+    (count) => {
+      if (count === greetsSeen) return;
+      greetsSeen = count;
+      if (!prefersReducedMotion()) play("greet", GREET_MS);
+    },
+  );
+
+  // Bubbles mingle: now and then this one floats over to the others (main picks whom and moves it).
+  onSettled(() => {
+    let visitTimer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      const others = Math.max(1, bubbles.bubbleCount() - 1);
+      const delay = (VISIT_DELAY_MS.min + Math.random() * (VISIT_DELAY_MS.max - VISIT_DELAY_MS.min)) / others;
+      visitTimer = setTimeout(() => {
+        if (
+          bubbles.bubbleCount() > 1 &&
+          !expanded() &&
+          motion() === "rest" &&
+          document.visibilityState === "visible" &&
+          !prefersReducedMotion()
+        )
+          bubbles.visit();
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => clearTimeout(visitTimer);
+  });
+
   // Now and then a resting orb hops in place, so it reads as alive; only on screen, only collapsed.
   onSettled(() => {
     let hopTimer: ReturnType<typeof setTimeout> | undefined;
@@ -185,7 +225,7 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
                 status={status()}
                 mood={mood()}
                 motion={orbMotion()}
-                attachHint={hint() ? t("bubbles.attachHint", { app: hint() ?? "" }) : null}
+                attachHint={attachHintText()}
                 unreadCount={unreadReplies()[props.agentId] ?? 0}
                 attachedLabel={label()}
                 onPointerDown={drag.pointerDown}

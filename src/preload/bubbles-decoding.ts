@@ -3,9 +3,11 @@
 import {
   type BubbleAttachHint,
   type BubbleAttachStatus,
+  type BubbleMotionCue,
   type BubblesSnapshot,
   isBubbleAttachHint,
   isBubbleAttachStatus,
+  isBubbleMotionCue,
   isBubblesSnapshot,
 } from "@openbot/contracts/ipc";
 
@@ -22,4 +24,9 @@ export function decodeBubbleAttachStatus(value: unknown): BubbleAttachStatus {
 export function decodeBubbleAttachHint(value: unknown): BubbleAttachHint {
   if (isBubbleAttachHint(value)) return value;
   throw new Error("Invalid bubble attach hint.");
+}
+
+export function decodeBubbleMotionCue(value: unknown): BubbleMotionCue {
+  if (isBubbleMotionCue(value)) return value;
+  throw new Error("Invalid bubble motion cue.");
 }

@@ -6,7 +6,7 @@ export const messages = defineMessages("bubbles", {
   "bubbles.trayShowAll": "Show all bubbles",
   "bubbles.trayHideAll": "Hide all bubbles",
   "bubbles.trayOpenMain": "Open main window",
-  "bubbles.trayNudges": "Let bubbles nudge me",
+  "bubbles.trayNudges": "Lively bubbles (nudges and visits)",
   "bubbles.character": "Bubble character",
   "bubbles.characterOwn": "Agent's own look",
   "bubbles.character.pip": "Pip",

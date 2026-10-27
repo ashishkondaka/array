@@ -39,20 +39,68 @@ export interface SpringState {
   velocity: number;
 }
 
-const RESPONSE_SECONDS = 0.4;
-const STIFFNESS = (2 * Math.PI) / RESPONSE_SECONDS;
+/** Apple's response for repositioning. A visit floats on a slower one (`VISIT_RESPONSE`). */
+export const DEFAULT_RESPONSE = 0.4;
+export const VISIT_RESPONSE = 1.1;
+/** A bump: quick, so it reads as contact. */
+export const BUMP_RESPONSE = 0.22;
 
-export function springStep(state: SpringState, target: number, seconds: number): SpringState {
+export function springStep(
+  state: SpringState,
+  target: number,
+  seconds: number,
+  response: number = DEFAULT_RESPONSE,
+): SpringState {
+  const stiffness = (2 * Math.PI) / response;
   const offset = state.position - target;
-  const decay = Math.exp(-STIFFNESS * seconds);
-  const slope = state.velocity + STIFFNESS * offset;
+  const decay = Math.exp(-stiffness * seconds);
+  const slope = state.velocity + stiffness * offset;
   return {
     position: target + (offset + slope * seconds) * decay,
-    velocity: (state.velocity - STIFFNESS * slope * seconds) * decay,
+    velocity: (state.velocity - stiffness * slope * seconds) * decay,
   };
 }
 
 /** Settled: within half a point of the target and nearly still. */
 export function springSettled(state: SpringState, target: number): boolean {
   return Math.abs(state.position - target) < 0.5 && Math.abs(state.velocity) < 5;
+}
+
+/** The gap between two orbs side by side on a visit. */
+const VISIT_GAP = 6;
+
+/**
+ * Where a visitor stops beside the orb it visits: on the side it comes from, at the same height with
+ * a little play, and on the partner's display.
+ */
+export function visitSpot(
+  visitor: { x: number; y: number },
+  partner: { x: number; y: number },
+  workAreas: readonly BubbleBounds[],
+  jitter: number,
+): { x: number; y: number } {
+  const size = BUBBLE_LIMITS.orbSize;
+  const fromLeft = visitor.x <= partner.x;
+  const x = partner.x + (fromLeft ? -(size + VISIT_GAP) : size + VISIT_GAP);
+  const y = partner.y + Math.round(jitter * 12);
+  const area = workAreaFor({ x: partner.x, y: partner.y, width: size, height: size }, workAreas);
+  // At a display edge, the other side.
+  const side =
+    x < area.x || x + size > area.x + area.width ? partner.x + (fromLeft ? size + VISIT_GAP : -(size + VISIT_GAP)) : x;
+  return {
+    x: Math.round(Math.min(Math.max(side, area.x), area.x + area.width - size)),
+    y: Math.round(Math.min(Math.max(y, area.y), area.y + area.height - size)),
+  };
+}
+
+/** The bumped orb gives way: a short push straight away from the visitor. */
+export function bumpOffset(
+  visitor: { x: number; y: number },
+  partner: { x: number; y: number },
+): { x: number; y: number } {
+  const dx = partner.x - visitor.x;
+  const dy = partner.y - visitor.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const push = 18;
+  return { x: Math.round((dx / length) * push), y: Math.round((dy / length) * push) };
 }

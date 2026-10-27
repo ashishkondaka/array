@@ -199,6 +199,7 @@ import type {
   BubbleCharacterInput,
   BubbleDragPoint,
   BubbleExpandedInput,
+  BubbleMotionCue,
   BubblesSnapshot,
 } from "./ipc-bubbles"; // bubbles: fork contracts
 import type {
@@ -872,6 +873,8 @@ export const IPC_ENDPOINTS = {
     setNudges: request<boolean, void>()("bubbles:set-nudges"),
     /** Only a bubble sends this, for its own orb: it travels to the pointer and back. */
     nudge: request<undefined, void>()("bubbles:nudge"),
+    /** Only a bubble sends this, for its own orb: it floats over to other bubbles, greets them, and goes home. */
+    visit: request<undefined, void>()("bubbles:visit"),
     detach: request<string, void>()("bubbles:detach"),
     /** Opens the attached browser window's page in the OpenBot browser for the agent. */
     openAttachedInBrowser: request<string, void>()("bubbles:open-attached-in-browser"),
@@ -880,6 +883,7 @@ export const IPC_ENDPOINTS = {
     attachStatus: event<BubbleAttachStatus>()("bubbles:attach-status"),
     /** The app a dragged orb would attach to if released now, after it rested over its window. */
     attachHint: event<BubbleAttachHint>()("bubbles:attach-hint"),
+    motionCue: event<BubbleMotionCue>()("bubbles:motion-cue"),
   },
   computerUse: {
     getState: request<undefined, ComputerUseState>()("computer-use:get-state"),

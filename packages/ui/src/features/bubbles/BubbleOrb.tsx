@@ -14,7 +14,7 @@ import type { BubbleStatus } from "./bubble-status";
  * What the orb is doing besides resting: a short hop now and then, a wiggle beside the pointer,
  * lifted while carried, or armed over a window it would attach to on release.
  */
-export type BubbleOrbMotion = "rest" | "hop" | "nudge" | "lift" | "armed";
+export type BubbleOrbMotion = "rest" | "hop" | "nudge" | "lift" | "armed" | "greet";
 
 /** The avatar draws at the display rate while the orb moves, and at the shared 30 fps cap otherwise. */
 const MOVING_FPS = 120;
@@ -53,6 +53,15 @@ export function BubbleOrb(props: BubbleOrbProps) {
   };
   // A resting orb holds still until the pointer arrives; it animates while it works, waits or moves.
   const lively = () => props.motion !== "rest" || props.status === "working" || props.status === "attention";
+  // Functions, not JSX ternaries: the compiler turns a ternary prop into a getter that creates a memo,
+  // and the avatar reads these inside an effect, where creating one halts the window's updates.
+  // A resting orb holds still: a busy mood would keep the avatar drawing 30 times a second on every
+  // orb on the desktop. The ring carries the status meanwhile.
+  const avatarMood = () => (lively() ? props.mood : "idle");
+  const avatarMotion = () => (lively() ? "always" : "hover");
+  const avatarFps = () => (props.motion === "rest" ? undefined : MOVING_FPS);
+  const avatarHue = () => (props.character ? props.character.hue : props.agent.avatarHue);
+  const avatarUrl = () => (props.character ? null : props.agent.avatarUrl);
   return (
     <div class="bubble-orb-frame" data-attached={props.attachedLabel ? "true" : undefined}>
       {/* A button, so Enter and Space expand it. The pointer handlers make it the drag handle too. */}
@@ -73,14 +82,12 @@ export function BubbleOrb(props: BubbleOrbProps) {
         <span class="bubble-orb-body">
           <AgentAvatar
             seed={props.agent.avatarSeed}
-            hue={props.character ? props.character.hue : props.agent.avatarHue}
-            url={props.character ? null : props.agent.avatarUrl}
+            hue={avatarHue()}
+            url={avatarUrl()}
             shape={props.character?.shape}
-            // A resting orb holds still: a busy mood would keep the avatar drawing 30 times a second on
-            // every orb on the desktop. The ring carries the status meanwhile.
-            mood={lively() ? props.mood : "idle"}
-            motion={lively() ? "always" : "hover"}
-            fps={props.motion === "rest" ? undefined : MOVING_FPS}
+            mood={avatarMood()}
+            motion={avatarMotion()}
+            fps={avatarFps()}
             class="bubble-orb-avatar"
           />
         </span>

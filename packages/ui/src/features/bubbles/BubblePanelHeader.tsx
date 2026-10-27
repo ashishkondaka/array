@@ -22,17 +22,31 @@ export interface BubblePanelHeaderProps {
 
 export function BubblePanelHeader(props: BubblePanelHeaderProps) {
   const { t } = useText();
+  // Functions, not JSX ternaries: a ternary prop becomes a memo-creating getter that the avatar would
+  // read inside an effect.
+  const avatarHue = () => (props.character ? props.character.hue : props.agent.avatarHue);
+  const avatarUrl = () => (props.character ? null : props.agent.avatarUrl);
   return (
     <header class="bubble-panel-header">
-      <AgentAvatar
-        seed={props.agent.avatarSeed}
-        hue={props.character ? props.character.hue : props.agent.avatarHue}
-        url={props.character ? null : props.agent.avatarUrl}
-        shape={props.character?.shape}
-        mood={props.mood}
-        motion="hover"
-        class="bubble-panel-avatar"
-      />
+      {/* Where the orb was: clicking the agent again closes the panel, without moving the pointer. */}
+      <Button
+        variant="ghost"
+        type="button"
+        class="bubble-panel-avatar-button"
+        aria-label={t("bubbles.collapse")}
+        title={t("bubbles.collapse")}
+        onClick={() => props.onCollapse()}
+      >
+        <AgentAvatar
+          seed={props.agent.avatarSeed}
+          hue={avatarHue()}
+          url={avatarUrl()}
+          shape={props.character?.shape}
+          mood={props.mood}
+          motion="hover"
+          class="bubble-panel-avatar"
+        />
+      </Button>
       <div class="bubble-panel-title">
         <span class="bubble-panel-name">{props.agent.name}</span>
         <Show when={props.attachedLabel}>

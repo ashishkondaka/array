@@ -191,7 +191,12 @@ import {
   decodeBrowserDockPresentation,
   decodeBrowserDockShown,
 } from "./browser-dock-decoding";
-import { decodeBubbleAttachHint, decodeBubbleAttachStatus, decodeBubblesSnapshot } from "./bubbles-decoding"; // bubbles: fork decoders
+import {
+  decodeBubbleAttachHint,
+  decodeBubbleAttachStatus,
+  decodeBubbleMotionCue,
+  decodeBubblesSnapshot,
+} from "./bubbles-decoding"; // bubbles: fork decoders
 import { clipboardFiles } from "./clipboard-files";
 import {
   decodeComputerUseHighlightPlacement,
@@ -669,11 +674,13 @@ const openbotApi: OpenBotDesktopApi = {
     setCharacter: decodeVoid,
     setNudges: decodeVoid,
     nudge: decodeVoid,
+    visit: decodeVoid,
     detach: decodeVoid,
     openAttachedInBrowser: decodeVoid,
     changed: decodeBubblesSnapshot,
     attachStatus: decodeBubbleAttachStatus,
     attachHint: decodeBubbleAttachHint,
+    motionCue: decodeBubbleMotionCue,
   }),
   browserDock: bridgeGroup(IPC_ENDPOINTS.browserDock, {
     publishPresentation: decodeVoid,

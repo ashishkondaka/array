@@ -2,7 +2,7 @@
 
 import { BUBBLE_LIMITS } from "@openbot/contracts/ipc";
 import { describe, expect, it } from "vitest";
-import { nudgeTarget, type SpringState, springSettled, springStep } from "./bubble-motion";
+import { bumpOffset, nudgeTarget, type SpringState, springSettled, springStep, visitSpot } from "./bubble-motion";
 
 const primary = { x: 0, y: 25, width: 1440, height: 875 };
 const right = { x: 1440, y: 0, width: 1920, height: 1080 };
@@ -46,5 +46,24 @@ describe("the nudge spring", () => {
     const redirected = springStep(moving, 0, 1 / 60);
     expect(moving.velocity).toBeGreaterThan(0);
     expect(redirected.position).toBeGreaterThan(moving.position);
+  });
+});
+
+describe("bubbles mingling", () => {
+  it("stops beside the visited orb, on the side it comes from", () => {
+    const left = visitSpot({ x: 100, y: 300 }, { x: 600, y: 300 }, [primary], 0);
+    expect(left).toEqual({ x: 600 - BUBBLE_LIMITS.orbSize - 6, y: 300 });
+    const right = visitSpot({ x: 900, y: 300 }, { x: 600, y: 300 }, [primary], 0);
+    expect(right).toEqual({ x: 600 + BUBBLE_LIMITS.orbSize + 6, y: 300 });
+  });
+
+  it("goes round to the other side at a display edge", () => {
+    const spot = visitSpot({ x: 0, y: 300 }, { x: 0, y: 300 }, [primary], 0);
+    expect(spot.x).toBe(BUBBLE_LIMITS.orbSize + 6);
+  });
+
+  it("bumps the visited orb straight away from the visitor", () => {
+    expect(bumpOffset({ x: 0, y: 0 }, { x: 100, y: 0 })).toEqual({ x: 18, y: 0 });
+    expect(bumpOffset({ x: 5, y: 5 }, { x: 5, y: 5 })).toEqual({ x: 0, y: 0 });
   });
 });

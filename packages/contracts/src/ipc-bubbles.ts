@@ -104,6 +104,16 @@ export interface BubbleAttachStatus {
   issue: BubbleAttachIssue | null;
 }
 
+/** A moment the orb plays, which main choreographs: "greet" when two bubbles meet on a visit. */
+export interface BubbleMotionCue {
+  agentId: string;
+  cue: "greet";
+}
+
+export function isBubbleMotionCue(value: unknown): value is BubbleMotionCue {
+  return isDynamicRecord(value) && isIdentifier(value.agentId) && value.cue === "greet";
+}
+
 /** While a dragged orb rests over a window: the app a release would attach it to. Null when none. */
 export interface BubbleAttachHint {
   agentId: string;

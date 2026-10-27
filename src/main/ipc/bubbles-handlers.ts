@@ -54,6 +54,7 @@ export function bubblesIpcHandlers({ bubbles, attach }: BubblesIpcDependencies):
       ),
       setNudges: payloadHandler(parseBubbleNudges, (nudges) => bubbles.setNudges(nudges)),
       nudge: eventHandler((event) => bubbles.nudge(requireBubbleSender(bubbles, event.sender.id))),
+      visit: eventHandler((event) => bubbles.visit(requireBubbleSender(bubbles, event.sender.id))),
       detach: payloadHandler(parseBubbleAgentId, (agentId) => attach()?.detach(agentId)),
       openAttachedInBrowser: payloadHandler(parseBubbleAgentId, (agentId) => {
         const controller = attach();

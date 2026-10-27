@@ -143,6 +143,35 @@ html[data-bubble-window] body {
   will-change: transform;
 }
 
+/* Two bubbles meet: a little jump and a tilt toward each other. */
+.bubble-orb[data-motion="greet"] .bubble-orb-body {
+  animation: bubble-orb-greet calc(var(--openbot-duration-slow) * 2.5) var(--openbot-ease-out) both;
+  will-change: transform;
+}
+
+@keyframes bubble-orb-greet {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+
+  20% {
+    transform: translateY(0) rotate(0deg) scale(1.08, 0.92);
+  }
+
+  40% {
+    transform: translateY(-16%) rotate(-10deg) scale(0.96, 1.06);
+  }
+
+  60% {
+    transform: translateY(0) rotate(8deg) scale(1.04, 0.96);
+  }
+
+  80% {
+    transform: translateY(-6%) rotate(-4deg) scale(1);
+  }
+}
+
 /* Squash before the jump, stretch in the air, squash on landing: the hop reads as weight. */
 @keyframes bubble-orb-hop {
   0% {
@@ -348,17 +377,30 @@ html[data-bubble-window] body {
   height: var(--bubble-header-height);
   align-items: center;
   gap: var(--openbot-space-2);
-  padding: 0 var(--openbot-space-2) 0 var(--openbot-space-3);
+  padding: 0 var(--openbot-space-2);
   background: var(--bubble-glass-header);
   box-shadow: 0 1px 0 var(--bubble-glass-rim-soft);
   -webkit-app-region: drag;
   backdrop-filter: blur(var(--bubble-glass-blur)) saturate(180%);
 }
 
+/* 40pt wide, 8pt from the left, centred in the 48pt header: `PANEL_OFFSET` in main puts its centre
+ * on the orb's centre, so a second click in the same place closes the panel. */
+.bubble-panel-avatar-button.ui-button {
+  display: grid;
+  width: var(--openbot-control-xl);
+  height: var(--openbot-control-xl);
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border-radius: var(--openbot-radius-pill);
+  -webkit-app-region: no-drag;
+}
+
 .bubble-panel-header .bubble-panel-avatar {
   width: var(--openbot-control-sm);
   height: var(--openbot-control-sm);
-  flex: none;
+  pointer-events: none;
 }
 
 .bubble-panel-title {

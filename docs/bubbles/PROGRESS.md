@@ -209,3 +209,23 @@ The cost was the avatar: an agent with a recent reply has a "responded" mood tha
 avatar engine at 30 fps on every orb, and the attention pulse animated `box-shadow` (a paint per
 frame). A resting orb now shows a still avatar (the ring carries the status), and the pulse is a halo
 that animates `transform` and `opacity` only.
+
+User requests in Phase 5:
+
+- Click to close in place: the panel opens offset from the orb (`PANEL_OFFSET`) so its header avatar
+  button sits where the orb's centre was; clicking the agent again closes it. Checked with dev
+  automation (the header avatar is the first "Collapse" button; clicking it collapses).
+- Bubbles mingle: each bubble asks to visit every 20–45 s divided by the number of other bubbles, so
+  a crowd mingles more. Main floats it (spring response 1.1 s) beside one or two other orbs, both play
+  a greet (hop and tilt), the visited orb is bumped 18 pt away and springs back, and the visitor
+  floats home. Only collapsed, unattached, idle bubbles take part; the tray toggle "Lively bubbles
+  (nudges and visits)" and reduced motion turn it off. Over a minute with three bubbles mingling,
+  total CPU averaged 8.1 % (main 4.1 %, moving windows during visits); between visits it is near 0.
+- Fixed a window freeze: ternary props on the avatar (`mood={a ? b : c}`) compile to memo-creating
+  getters that the avatar reads in an effect, which halts the window under Solid 2 RC (the orbs
+  stopped expanding). They are plain helper functions now; 90 s of visits ran with no halt.
+
+Rebase: `git fetch upstream` found no new commits on `upstream/main` (still `f91535fb0`), so the
+branches need no rebase today. To rebase later: `git fetch upstream && git rebase upstream/main` on
+the newest `bubbles/*` branch, fix conflicts by keeping upstream's change and putting each
+`bubbles:` hook back ([UPSTREAM_TOUCHPOINTS.md](UPSTREAM_TOUCHPOINTS.md)).

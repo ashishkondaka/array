@@ -26,10 +26,13 @@ const Bubbles = createSimpleContext({
       issues: Record<string, BubbleAttachIssue | undefined>;
       /** The app a dragged orb would attach to on release, while it rests over its window. */
       hints: Record<string, string | undefined>;
+      /** Counts the greets main asked each bubble to play; a change plays one. */
+      greets: Record<string, number | undefined>;
     }>({
       snapshot: { bubbles: [], hidden: false, characters: [], nudges: true },
       issues: {},
       hints: {},
+      greets: {},
     });
     const local = () => activeServerId() === LOCAL_SERVER_ID;
 
@@ -54,10 +57,16 @@ const Bubbles = createSimpleContext({
           draft.hints[agentId] = app ?? undefined;
         }),
       );
+      const unsubscribeCue = port.onMotionCue(({ agentId }) =>
+        setState((draft) => {
+          draft.greets[agentId] = (draft.greets[agentId] ?? 0) + 1;
+        }),
+      );
       return () => {
         unsubscribe();
         unsubscribeStatus();
         unsubscribeHint();
+        unsubscribeCue();
       };
     });
 
@@ -80,6 +89,9 @@ const Bubbles = createSimpleContext({
       nudges: () => state.snapshot.nudges,
       issueOf: (agentId: string) => state.issues[agentId] ?? null,
       hintOf: (agentId: string) => state.hints[agentId] ?? null,
+      greetsOf: (agentId: string) => state.greets[agentId] ?? 0,
+      bubbleCount: () => state.snapshot.bubbles.length,
+      visit: () => send(port().visit()),
       dismissIssue: (agentId: string) =>
         setState((draft) => {
           draft.issues[agentId] = undefined;
