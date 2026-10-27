@@ -1,5 +1,6 @@
 import { installPointerFocusGuard } from "@openbot/ui/pointer-focus";
 import { render } from "@solidjs/web";
+import { readBubbleWindowTarget } from "./features/bubbles/bubble-window"; // bubbles: window mode
 // Copying a selection with a formula in it gives its LaTeX source, not the typeset glyphs twice.
 import "katex/contrib/copy-tex";
 import { App } from "./App";
@@ -25,4 +26,11 @@ startActionSounds();
 // `App` must stay a static import. Main sends the first runtime snapshot on `did-finish-load`,
 // which does not wait for a dynamic import, and `App` would subscribe after it. The helper windows
 // load `helper.html` instead.
-render(() => <App chatWindow={readChatWindowTarget(window.location.search)} />, root);
+// bubbles: a bubble window is a chat window that draws the bubble.
+const bubbleWindow = readBubbleWindowTarget(window.location.search);
+render(
+  () => (
+    <App chatWindow={readChatWindowTarget(window.location.search) ?? bubbleWindow} bubble={bubbleWindow !== null} />
+  ),
+  root,
+);

@@ -11,6 +11,7 @@
 @import "@openbot/ui/styles/action-menu.css";
 @import "@openbot/ui/features/dynamic-island/dynamic-island.css";
 @import "@openbot/ui/features/dynamic-island/dynamic-island-surface.css";
+@import "@openbot/ui/features/bubbles/bubbles.css"; /* bubbles: fork styles */
 @import "@openbot/ui/features/sidebar/sidebar-mobile-app.css";
 @import "./styles/base.css";
 @import "@openbot/ui/features/account/auth.css";

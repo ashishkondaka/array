@@ -8,7 +8,7 @@
  * and shows when the user hid it in place of the last message.
  */
 
-import { AppWindow, Badge, buttonVariants, Clock3, ContextMenu, Lock } from "@openbot/ui";
+import { AppWindow, Badge, buttonVariants, Clock3, ContextMenu, Lock, PictureInPicture2 } from "@openbot/ui";
 import type { JSX } from "@solidjs/web";
 import { createSignal, Show } from "solid-js";
 import type { AgentProfile } from "../../data";
@@ -105,6 +105,12 @@ export function SidebarAgentRow(rowProps: { agent: AgentProfile; waiting?: boole
                 <Show when={lockLabel()}>
                   <span class="agent-row-access" title={lockLabel()}>
                     <Lock aria-hidden="true" />
+                  </span>
+                </Show>
+                {/* bubbles: the agent floats in a desktop bubble. */}
+                <Show when={props.poppedOutAgentIds?.has(rowProps.agent.id)}>
+                  <span class="agent-row-access" title={t("bubbles.poppedOut")}>
+                    <PictureInPicture2 aria-hidden="true" />
                   </span>
                 </Show>
                 <Show when={inWindow()}>

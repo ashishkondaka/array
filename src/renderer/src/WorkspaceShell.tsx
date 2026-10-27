@@ -10,6 +10,7 @@ import { createEffect, createMemo, Show } from "solid-js";
 import { useAccountUsagePolling } from "./features/account/account-usage-polling";
 import { useAgents } from "./features/agents/agents-context";
 import { WorkspaceAgentSetup } from "./features/agents/WorkspaceAgentSetup";
+import { BubbleShell } from "./features/bubbles/BubbleShell"; // bubbles: window mode
 import { useChannels } from "./features/channels/channels-context";
 import { WorkspaceChannelConversation } from "./features/channels/WorkspaceChannelConversation";
 import { ConnectorsProvider } from "./features/connectors/connectors-context";
@@ -179,6 +180,10 @@ export function WorkspaceShell(props: { account: () => CentralAuthUser }) {
     createHostRestartToasts(() => remoteHosts().filter((host) => !followsServerUpdate(host.id)));
     createRoutineTimezonePrompt(() => desktopRoutineZoneTargets(servers()));
   }
+
+  // bubbles: a bubble window draws the orb or the compact chat instead of the frame.
+  const bubbleAgentId = platform.bubble ? platform.chatWindow?.agentId : undefined;
+  if (bubbleAgentId) return <BubbleShell account={props.account} agentId={bubbleAgentId} />;
 
   return (
     // The overlays and the chat cards show the same connectors.

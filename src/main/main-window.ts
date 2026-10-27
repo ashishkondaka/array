@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+
 /**
  * Every `BrowserWindow` the desktop app opens, the renderer URLs they load, and the application
  * menu. It is the one surface that legitimately keeps a mutable window handle: macOS destroys the
@@ -41,6 +42,7 @@ import {
   isSelectAllShortcut,
   isToggleDevToolsShortcut,
 } from "../backend/browser-shortcuts";
+import { bubbleWindows } from "./bubbles/bubble-window-registry"; // bubbles: windows of the fork
 import type { HighlightDisplay } from "./computer-use-highlight-window";
 import { shouldShowDevelopmentWindow } from "./development-profile";
 import { dynamicIslandNotchSizeForDisplay } from "./dynamic-island-window";
@@ -348,8 +350,10 @@ export function createMainWindowController({
 
   return {
     getMainWindow: () => holder.current,
-    getChatWindows: () =>
-      [...chatWindows.values()].map((chat) => chat.window).filter((window) => !window.isDestroyed()),
+    getChatWindows: () => [
+      ...[...chatWindows.values()].map((chat) => chat.window).filter((window) => !window.isDestroyed()),
+      ...bubbleWindows(), // bubbles: a bubble is a chat window that floats
+    ],
     chatWindowTargets,
     openChatWindow,
     openMainWindow,

@@ -115,6 +115,12 @@ export interface SidebarProps {
   onOpenAgentWindow?: ((agentId: string) => void) | undefined;
   /** The agents whose chat is open in a window of its own. Their rows show a window mark. */
   windowAgentIds?: ReadonlySet<string> | undefined;
+  /** bubbles: floats the agent in a desktop bubble. Without it, the agent menu shows no pop-out item. */
+  onPopOutAgent?: ((agentId: string) => void) | undefined;
+  /** bubbles: closes the agent's bubble. */
+  onBringBackAgent?: ((agentId: string) => void) | undefined;
+  /** bubbles: the agents in a desktop bubble. Their rows show a bubble mark. */
+  poppedOutAgentIds?: ReadonlySet<string> | undefined;
   compact: boolean;
   /** A card under the chat list, such as an announcement. The compact sidebar has no room for it. */
   footer?: JSX.Element;

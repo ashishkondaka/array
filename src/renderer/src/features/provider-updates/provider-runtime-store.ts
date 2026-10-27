@@ -329,7 +329,9 @@ export function createProviderRuntimeStore(
         // A closed notification stays closed, including across the server switch that rebuilds this
         // store: the record of it is kept by the notification module, which outlives the switch.
         if (providerUpdateOfferClosed(update.provider, update.availableVersion)) continue;
-        showProviderUpdateToast(update, () => void startProviderUpdate(update.provider));
+        // bubbles: the toast creates a root, which Solid 2 refuses inside an effect callback and then
+        // halts every update of the window (a frozen bubble). A microtask runs it after the callback.
+        queueMicrotask(() => showProviderUpdateToast(update, () => void startProviderUpdate(update.provider)));
       }
       announced = next;
     },

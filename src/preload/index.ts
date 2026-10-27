@@ -191,6 +191,7 @@ import {
   decodeBrowserDockPresentation,
   decodeBrowserDockShown,
 } from "./browser-dock-decoding";
+import { decodeBubblesSnapshot } from "./bubbles-decoding"; // bubbles: fork decoders
 import { clipboardFiles } from "./clipboard-files";
 import {
   decodeComputerUseHighlightPlacement,
@@ -299,7 +300,8 @@ const attachmentImportListeners = new Set<(event: AttachmentImportEvent) => void
  */
 const chatWindowServerId = (() => {
   const query = new URLSearchParams(window.location.search);
-  return query.get("window") === "chat" ? query.get("server") : null;
+  // bubbles: a bubble window is a chat window too.
+  return query.get("window") === "chat" || query.get("window") === "bubble" ? query.get("server") : null;
 })();
 let selectedServerId: string = chatWindowServerId ?? LOCAL_SERVER_ID;
 
@@ -653,6 +655,18 @@ const openbotApi: OpenBotDesktopApi = {
     removeProviderAccount: decodeAgentStatusFromMain,
     providerUsageResets: decodeProviderUsageResetsFromMain,
     resetProviderUsage: decodeProviderUsageResetOutcomeFromMain,
+  }),
+  // bubbles: floating agent windows of the fork.
+  bubbles: bridgeGroup(IPC_ENDPOINTS.bubbles, {
+    list: decodeBubblesSnapshot,
+    open: decodeVoid,
+    close: decodeVoid,
+    setExpanded: decodeVoid,
+    focusMain: decodeVoid,
+    setHidden: decodeVoid,
+    dragTo: decodeVoid,
+    dragEnd: decodeVoid,
+    changed: decodeBubblesSnapshot,
   }),
   browserDock: bridgeGroup(IPC_ENDPOINTS.browserDock, {
     publishPresentation: decodeVoid,

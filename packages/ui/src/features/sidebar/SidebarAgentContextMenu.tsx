@@ -3,7 +3,7 @@
  * away is `SidebarMoveToSubmenu`, which the channel menu shows too; everything here is agent-only.
  */
 
-import { AppWindow, ContextMenu, Copy, Moon, Pin, PinOff, RotateCcw } from "@openbot/ui";
+import { AppWindow, ContextMenu, Copy, Moon, PictureInPicture2, Pin, PinOff, RotateCcw } from "@openbot/ui";
 import { Show } from "solid-js";
 import type { AgentProfile } from "../../data";
 import { useText } from "../../text";
@@ -41,6 +41,22 @@ export function SidebarAgentContextMenu(menuProps: { agent: AgentProfile; pinned
               <span>{t("sidebar.agentMenu.openWindow")}</span>
             </ContextMenu.Item>
           )}
+        </Show>
+        {/* bubbles: pop the agent out to a desktop bubble, or bring it back. */}
+        <Show when={!menuProps.userHidden && props.onPopOutAgent}>
+          {(popOut) => {
+            const poppedOut = () => props.poppedOutAgentIds?.has(menuProps.agent.id) ?? false;
+            return (
+              <ContextMenu.Item
+                onSelect={() =>
+                  poppedOut() ? props.onBringBackAgent?.(menuProps.agent.id) : popOut()(menuProps.agent.id)
+                }
+              >
+                <PictureInPicture2 class="agent-context-icon size-4" aria-hidden="true" />
+                <span>{poppedOut() ? t("bubbles.bringBack") : t("bubbles.popOut")}</span>
+              </ContextMenu.Item>
+            );
+          }}
         </Show>
         <SidebarMoveToSubmenu chatId={menuProps.agent.id} />
         <ContextMenu.Item onSelect={() => props.onEditAgent(menuProps.agent.id)}>

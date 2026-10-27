@@ -31,6 +31,7 @@ import { runCauseEffect } from "../backend/effect-boundary";
 import { readAppVariant, resolveAppIconPath, resolveLogoColorIconPath } from "./app-icon";
 import { type ApplicationServices, createApplicationServices } from "./application-services";
 import { type BackgroundTray, createBackgroundTray } from "./background-tray";
+import { BubbleWindowManager } from "./bubbles/bubble-window-manager"; // bubbles: window manager
 import {
   BUBBLES_APP_ID,
   BUBBLES_APP_NAME,
@@ -64,6 +65,7 @@ import { billingIpcHandlers } from "./ipc/billing-handlers";
 import { bitwardenConnectorIpcHandlers } from "./ipc/bitwarden-connector-handlers";
 import { browserDockIpcHandlers } from "./ipc/browser-dock-handlers";
 import { browserIpcHandlers } from "./ipc/browser-handlers";
+import { bubblesIpcHandlers } from "./ipc/bubbles-handlers"; // bubbles: IPC group
 import { channelMemoryIpcHandlers } from "./ipc/channel-memory-handlers";
 import { channelRoutineIpcHandlers } from "./ipc/channel-routine-handlers";
 import { computerUseIpcHandlers } from "./ipc/computer-use-handlers";
@@ -402,7 +404,8 @@ const windows = createMainWindowController({
   developmentRemoteRole,
   developmentTestClientEnabled,
   isQuitting: () => isQuitting,
-  keepRunningInBackground: () => services?.appBehavior.keepRunningInBackground ?? false,
+  // bubbles: while a bubble is open, closing the main window hides it, so the agents keep running.
+  keepRunningInBackground: () => (services?.appBehavior.keepRunningInBackground ?? false) || bubbles.hasBubbles(),
   getServices: () => services,
   getTranslate: () => services?.language.translate ?? translateFor(resolveLocale("system", app.getLocale())),
   onRendererLoadStarted: () => {
@@ -419,6 +422,26 @@ const windows = createMainWindowController({
     attachQuitOnMainWindowClose(window);
   },
   reportError: (message, error) => logger.error(message, toLogValue(error)),
+});
+
+// bubbles: always-on-top agent windows. Constructed before `app.whenReady()`, so every dependency is a getter.
+const bubbles = new BubbleWindowManager({
+  userDataPath: app.getPath("userData"),
+  appIconPath,
+  translate: () => services?.language.translate ?? translateFor("en"),
+  isQuitting: () => isQuitting,
+  listAgents: () => services?.service.listAgents() ?? [],
+  focusMainWindow: (agentId) => {
+    const window = windowHolder.current;
+    if (!window || window.isDestroyed()) {
+      reopenMainWindow();
+      return;
+    }
+    showMainWindow(window);
+    if (agentId)
+      sendToRenderer(window, IPC_ENDPOINTS.notifications.opened, { serverId: "local", agentId, threadId: null });
+  },
+  quit: () => app.quit(),
 });
 
 let appIconColorImage: NativeImage | undefined;
@@ -613,6 +636,7 @@ function registerIpcHandlers({
   const getDialogParent = () => windows.getChatWindows().find((window) => window.isFocused()) ?? windowHolder.current;
 
   registerIpcGroups({
+    ...bubblesIpcHandlers({ bubbles }), // bubbles: IPC group
     ...appIpcHandlers({
       service,
       mailbox,
@@ -1152,6 +1176,7 @@ if (!hasSingleInstanceLock) {
       setIpcCallObserver((call) => trace.record({ kind: "ipc", ...call }));
       service.on("event", (event) => trace.observeAgentEvent(event));
       service.on("event", (event) => forwardAgentEvent("local", event));
+      service.on("event", (event) => event.type === "agents-changed" && bubbles.reconcileAgents()); // bubbles: deleted agents
       // A routine or its owner can be deleted outside the events API. Its route is then revoked here.
       // Turns and channel messages also send these events, so only a deleted owner starts a sync.
       let webhookAgentIds = new Set(service.listAgents().map((agent) => agent.id));
@@ -1270,6 +1295,8 @@ if (!hasSingleInstanceLock) {
         quit: () => app.quit(),
       });
       const tray = backgroundTray;
+      bubbles.setTrayIcon(appIconColorImage ?? nativeImage.createFromPath(appIconPath)); // bubbles: tray
+      teardown.push(0, "bubbles", () => bubbles.destroy()); // bubbles: windows, tray, shortcut
       tray.sync(appBehavior.keepRunningInBackground);
       const unsubscribeBackgroundTray = appBehavior.subscribe(() => tray.sync(appBehavior.keepRunningInBackground));
       teardown.push(0, "background tray", () => {
@@ -1282,6 +1309,7 @@ if (!hasSingleInstanceLock) {
       language.subscribe((preference) => {
         configureApplicationMenu(service, updater, interfaceSize, language.translate);
         tray.relabel();
+        bubbles.relabel(); // bubbles: tray labels
         for (const window of BrowserWindow.getAllWindows()) {
           sendToRenderer(window, IPC_ENDPOINTS.app.appLanguagePreference, preference);
         }
@@ -1369,9 +1397,11 @@ if (!hasSingleInstanceLock) {
           logger.error("Unable to republish this OpenBot:", toLogValue(error)),
         );
       }
-      void runCauseEffect(built.agentInitialization.start()).catch((error) => {
-        logger.error("Unable to initialize the local agent backend:", toLogValue(error));
-      });
+      void runCauseEffect(built.agentInitialization.start())
+        .then(() => Effect.runPromise(bubbles.restore())) // bubbles: reopen saved bubbles once agents exist
+        .catch((error) => {
+          logger.error("Unable to initialize the local agent backend:", toLogValue(error));
+        });
 
       const directoryRefresh = createRemoteDirectoryRefresh(() => {
         const generation = centralAuthGeneration;

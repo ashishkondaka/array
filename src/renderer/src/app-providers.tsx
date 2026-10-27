@@ -11,6 +11,7 @@ import { AgentEventBridge } from "./features/agents/agent-event-bridge";
 import { AgentReadTrackingProvider } from "./features/agents/agent-read-tracking";
 import { AgentsProvider } from "./features/agents/agents-context";
 import { BrowserTabsProvider } from "./features/browser/browser-context";
+import { BubblesProvider } from "./features/bubbles/bubbles-context"; // bubbles: context
 import { ChannelsProvider } from "./features/channels/channels-context";
 import { readStoredComposerDrafts } from "./features/conversation/composer-draft-storage";
 import { ConversationProvider } from "./features/conversation/conversation-context";
@@ -58,6 +59,8 @@ export interface AppProps {
   landingPreview?: boolean | undefined;
   peopleEnabled?: boolean | undefined;
   chatWindow?: ChatWindowTarget | null | undefined;
+  /** bubbles: the chat window is a floating bubble (OpenBot Bubbles fork). */
+  bubble?: boolean | undefined;
 }
 
 /**
@@ -102,6 +105,7 @@ export function AppProviders(props: ParentProps<AppProps>): JSX.Element {
       landingPreview={props.landingPreview}
       peopleEnabled={props.peopleEnabled}
       chatWindow={props.chatWindow}
+      bubble={props.bubble} // bubbles: window mode
     >
       <I18nProvider>
         <AuthProvider>
@@ -195,12 +199,15 @@ function ScopedProviders(props: ParentProps<ScopedConversationProps>): JSX.Eleme
                               <ServerSelectionProvider>
                                 <AgentActionsProvider>
                                   <ServerScopeProvider>
-                                    <AgentEventBridge />
-                                    {/* The Dynamic Island follows the main window only. */}
-                                    <Show when={!platform.chatWindow}>
-                                      <DynamicIslandBridge />
-                                    </Show>
-                                    {props.children}
+                                    {/* bubbles: the local host's floating bubbles */}
+                                    <BubblesProvider>
+                                      <AgentEventBridge />
+                                      {/* The Dynamic Island follows the main window only. */}
+                                      <Show when={!platform.chatWindow}>
+                                        <DynamicIslandBridge />
+                                      </Show>
+                                      {props.children}
+                                    </BubblesProvider>
                                   </ServerScopeProvider>
                                 </AgentActionsProvider>
                               </ServerSelectionProvider>

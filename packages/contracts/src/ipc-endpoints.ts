@@ -193,6 +193,7 @@ import type {
   UpdateBrowserProfileInput,
 } from "./ipc-browser-profiles";
 import type { LocalBrowserSecretResponse } from "./ipc-browser-secret";
+import type { BubbleDragPoint, BubbleExpandedInput, BubblesSnapshot } from "./ipc-bubbles"; // bubbles: fork contracts
 import type {
   ChannelMemory,
   CreateChannelMemoryInput,
@@ -843,6 +844,22 @@ export const IPC_ENDPOINTS = {
     setFrame: request<BrowserDockFrame, void>()("browser-dock:set-frame"),
     /** Whether the overlay shows the dock over the page. While it does, the dock in the renderer is inert. */
     shown: event<boolean>()("browser-dock:shown"),
+  },
+  // bubbles: floating agent windows of the local host (OpenBot Bubbles fork).
+  bubbles: {
+    list: request<undefined, BubblesSnapshot>()("bubbles:list"),
+    /** Opens the bubble of a local agent, or shows it when it is open. */
+    open: request<string, void>()("bubbles:open"),
+    close: request<string, void>()("bubbles:close"),
+    setExpanded: request<BubbleExpandedInput, void>()("bubbles:set-expanded"),
+    /** Shows the main window at the agent of the bubble. */
+    focusMain: request<string, void>()("bubbles:focus-main"),
+    /** Hides or shows every bubble without closing it. */
+    setHidden: request<boolean, void>()("bubbles:set-hidden"),
+    /** Only the bubble that the pointer drags sends these. */
+    dragTo: request<BubbleDragPoint, void>()("bubbles:drag-to"),
+    dragEnd: request<undefined, void>()("bubbles:drag-end"),
+    changed: event<BubblesSnapshot>()("bubbles:changed"),
   },
   computerUse: {
     getState: request<undefined, ComputerUseState>()("computer-use:get-state"),
@@ -1742,6 +1759,7 @@ export const IPC_GROUP_PATHS = {
   voice: "voice",
   dynamicIsland: "dynamicIsland",
   browserDock: "browserDock",
+  bubbles: "bubbles", // bubbles: fork group
   computerUse: "computerUse",
   skills: "skills",
   customProviders: "customProviders",

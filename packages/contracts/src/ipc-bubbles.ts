@@ -80,10 +80,15 @@ export interface BubbleAttachStatus {
   issue: BubbleAttachIssue | null;
 }
 
+/** Where a dragged orb is now: its top-left corner, in desktop points. */
 export interface BubbleDragPoint {
-  /** The pointer, in desktop points. */
-  screenX: number;
-  screenY: number;
+  x: number;
+  y: number;
+}
+
+export interface BubbleExpandedInput {
+  agentId: string;
+  expanded: boolean;
 }
 
 const ATTACH_ISSUES: readonly BubbleAttachIssue[] = [
@@ -152,4 +157,8 @@ export function isBubbleAttachStatus(value: unknown): value is BubbleAttachStatu
     isIdentifier(value.agentId) &&
     (value.issue === null || isOneOf(ATTACH_ISSUES, value.issue))
   );
+}
+
+export function isBubbleDragPoint(value: unknown): value is BubbleDragPoint {
+  return isDynamicRecord(value) && isCoordinate(value.x) && isCoordinate(value.y);
 }

@@ -10,6 +10,7 @@ export function App(props: AppProps = {}) {
         landingPreview={props.landingPreview}
         peopleEnabled={props.peopleEnabled}
         chatWindow={props.chatWindow}
+        bubble={props.bubble} // bubbles: window mode
       >
         <AppAccessGate />
       </AppProviders>

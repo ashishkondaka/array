@@ -1,0 +1,207 @@
+/* Floating agent bubbles (OpenBot Bubbles fork). The window is transparent: only the orb, the
+ * chip and the panel card paint. */
+
+html[data-bubble-window],
+html[data-bubble-window] body {
+  background: transparent;
+}
+
+.bubble-window {
+  --bubble-orb-size: calc(var(--openbot-control-xl) + var(--openbot-space-4));
+  --bubble-ring-width: var(--openbot-space-0-5);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+  color: var(--openbot-text-primary);
+  font-family: var(--openbot-font-sans);
+}
+
+.bubble-orb-frame {
+  display: flex;
+  align-items: center;
+  gap: var(--openbot-space-2);
+  padding: var(--openbot-space-1);
+}
+
+.bubble-orb.ui-button {
+  position: relative;
+  display: grid;
+  width: var(--bubble-orb-size);
+  height: var(--bubble-orb-size);
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border-radius: var(--openbot-radius-pill);
+  background: var(--openbot-bg-surface-raised);
+  box-shadow: var(--openbot-shadow-raised);
+  cursor: grab;
+  touch-action: none;
+}
+
+.bubble-orb.ui-button:active {
+  cursor: grabbing;
+}
+
+.bubble-orb-avatar {
+  width: calc(var(--bubble-orb-size) - var(--openbot-space-3));
+  height: calc(var(--bubble-orb-size) - var(--openbot-space-3));
+  pointer-events: none;
+}
+
+.bubble-orb-ring {
+  position: absolute;
+  inset: 0;
+  border: var(--bubble-ring-width) solid var(--openbot-border);
+  border-radius: var(--openbot-radius-pill);
+  pointer-events: none;
+}
+
+.bubble-orb[data-status="working"] .bubble-orb-ring {
+  border-color: var(--openbot-accent);
+}
+
+.bubble-orb[data-status="unread"] .bubble-orb-ring {
+  border-color: var(--openbot-badge-new);
+}
+
+.bubble-orb[data-status="attention"] .bubble-orb-ring {
+  border-color: var(--openbot-warning);
+  animation: bubble-orb-pulse var(--openbot-duration-slow) var(--openbot-ease-in-out) infinite alternate;
+}
+
+/* One running animation per attention orb only: an idle orb paints nothing, so it costs no frames. */
+@keyframes bubble-orb-pulse {
+  from {
+    box-shadow: 0 0 0 0 var(--openbot-warning-soft);
+  }
+
+  to {
+    box-shadow: 0 0 0 var(--openbot-space-1-5) var(--openbot-warning-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble-orb[data-status="attention"] .bubble-orb-ring {
+    animation: none;
+    box-shadow: 0 0 0 var(--openbot-space-1) var(--openbot-warning-soft);
+  }
+}
+
+.bubble-orb-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  min-width: var(--openbot-space-4);
+  height: var(--openbot-space-4);
+  place-items: center;
+  padding: 0 var(--openbot-space-1);
+  border-radius: var(--openbot-radius-pill);
+  background: var(--openbot-badge-new);
+  color: var(--openbot-text-on-status);
+  font-size: var(--openbot-text-sm);
+  font-weight: 600;
+}
+
+.bubble-orb-chip,
+.bubble-panel-attached {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--openbot-space-1);
+  color: var(--openbot-text-secondary);
+  font-size: var(--openbot-text-sm);
+}
+
+.bubble-orb-chip {
+  padding: var(--openbot-space-1) var(--openbot-space-2);
+  border-radius: var(--openbot-radius-pill);
+  background: var(--openbot-bg-surface-raised);
+  box-shadow: var(--openbot-shadow-raised);
+}
+
+.bubble-orb-chip svg,
+.bubble-panel-attached svg {
+  width: var(--openbot-space-3);
+  height: var(--openbot-space-3);
+  flex: none;
+}
+
+.bubble-orb-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble-panel {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--openbot-border);
+  border-radius: var(--openbot-radius-xl);
+  background: var(--openbot-bg-canvas);
+}
+
+.bubble-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--openbot-space-2);
+  padding: var(--openbot-space-2) var(--openbot-space-2) var(--openbot-space-2) var(--openbot-space-3);
+  border-bottom: 1px solid var(--openbot-border);
+  -webkit-app-region: drag;
+}
+
+.bubble-panel-avatar {
+  width: var(--openbot-control-sm);
+  height: var(--openbot-control-sm);
+  flex: none;
+}
+
+.bubble-panel-title {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.bubble-panel-name {
+  overflow: hidden;
+  font-size: var(--openbot-text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--openbot-space-0-5);
+  -webkit-app-region: no-drag;
+}
+
+.bubble-panel-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+/* The bubble header names the agent and moves the window, so the chat's own header stays hidden. */
+.bubble-panel-body .conversation-header {
+  display: none;
+}
+
+/* The main window's grid gives the conversation its height; in a bubble the panel body does. */
+.bubble-panel-body > .conversation-panel {
+  min-height: 0;
+  flex: 1;
+}
+
+/* A collapsed orb has no room for a notification; the main window shows it. */
+html[data-bubble-window="collapsed"] [data-sonner-toaster] {
+  display: none;
+}

@@ -20,6 +20,7 @@ import { useAgentActions } from "../agents/agent-actions";
 import { attentionByAgent } from "../agents/agent-runtime-snapshot";
 import { agentThreadAttention } from "../agents/agent-thread-attention";
 import { useAgents } from "../agents/agents-context";
+import { useBubbles } from "../bubbles/bubbles-context"; // bubbles: desktop bubbles
 import { useChannels } from "../channels/channels-context";
 import { useConversation } from "../conversation/conversation-context";
 import { useDirectMessages } from "../conversation/direct-messages-context";
@@ -53,6 +54,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
   const { t } = useText();
   const layout = useLayout();
   const platform = usePlatform();
+  const bubbles = useBubbles(); // bubbles: desktop bubbles
   const channels = useChannels();
   const { activeServer, activeServerId, activeServerSupportsCapability } = useServers();
   // The chats that main shows in a window of their own. Main sends the list on each change.
@@ -278,6 +280,10 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
           : (agentId) => void appPort().openChatWindow({ serverId: activeServerId(), agentId })
       }
       windowAgentIds={windowAgentIds()}
+      // bubbles: desktop bubbles of local agents
+      onPopOutAgent={bubbles.available() && !platform.landingPreview ? bubbles.popOut : undefined}
+      onBringBackAgent={bubbles.bringBack}
+      poppedOutAgentIds={bubbles.poppedOutIds()}
       compact={layout.leftPanelCompact()}
       onExpand={layout.expandSidebar}
       onOpenSearch={() => setGlobalSearchVisibility(true)}

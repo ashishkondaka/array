@@ -66,6 +66,8 @@ const Platform = createSimpleContext({
       peopleEnabled: props.peopleEnabled === true,
       /** The one chat of a window that main opened for it, or null in the main window. */
       chatWindow: props.chatWindow ?? null,
+      /** bubbles: the chat window is a floating bubble. */
+      bubble: props.bubble === true,
       /** The element the remote-desktop workspace makes inert while it is up. */
       appFrame: () => appFrame,
       setAppFrameElement: (element: HTMLDivElement) => {

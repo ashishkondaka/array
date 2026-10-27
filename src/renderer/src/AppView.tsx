@@ -47,7 +47,7 @@ export function AppAccessGate() {
   const detection = useProviderDetection();
   const { joinRemoteDuringSetup } = useServerSelection();
   const started = () => setup.setupLoaded() && platform.appInfo() !== null;
-  const [splashShown, setSplashShown] = createSignal(true);
+  const [splashShown, setSplashShown] = createSignal(!platform.bubble); // bubbles: an orb starts with no splash
   const languageStep = createLanguageStep();
   // Only a settled sign-out: a code in flight or a retry keeps the sign-in screen it belongs to.
   const languageStepShown = () => auth.centralAuth().status === "signed_out" && !languageStep.done();

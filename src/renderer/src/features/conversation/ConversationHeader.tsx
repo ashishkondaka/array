@@ -12,6 +12,8 @@ import { providerAccountName } from "@openbot/ui/components/provider-accounts";
 import { ConversationHeader as SharedConversationHeader } from "@openbot/ui/features/conversation/ConversationHeader";
 import { ThreadHeader } from "@openbot/ui/features/conversation/threads/ThreadHeader";
 import { Show } from "solid-js";
+import { usePlatform } from "../../platform";
+import { useBubbles } from "../bubbles/bubbles-context"; // bubbles: desktop bubble
 import { useConversationViewScope } from "./conversation-scope";
 
 const loadAgentSettingsPanel = () => import("./AgentSettingsPanel");
@@ -89,6 +91,18 @@ export function ConversationHeader() {
       return undefined;
     return { running: runtimeLabel(running, next), next: runtimeLabel(next, running) };
   };
+  // bubbles: a local agent can float in a desktop bubble. A bubble's own header hides this one.
+  const bubbles = useBubbles();
+  const platform = usePlatform();
+  const popOut = () => {
+    const agentId = props.agent?.id;
+    if (!agentId || !bubbles.available() || platform.bubble || platform.landingPreview) return undefined;
+    const poppedOut = bubbles.poppedOutIds().has(agentId);
+    return {
+      poppedOut,
+      onToggle: () => (poppedOut ? bubbles.bringBack(agentId) : bubbles.popOut(agentId)),
+    };
+  };
   return (
     <SharedConversationHeader
       agent={props.agent}
@@ -137,6 +151,7 @@ export function ConversationHeader() {
           : undefined
       }
       threads={<Show when={props.threads}>{(threads) => <ThreadHeader {...threads().header} />}</Show>}
+      popOut={popOut()} // bubbles: desktop bubble
       sidePanel={
         channel?.readOnly()
           ? undefined

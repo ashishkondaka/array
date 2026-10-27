@@ -1,4 +1,4 @@
-import { Badge, Button, Clock3, Lock } from "@openbot/ui";
+import { Badge, Button, Clock3, Lock, PictureInPicture2 } from "@openbot/ui";
 import { ProviderModelPicker } from "@openbot/ui/components/ProviderModelPicker";
 import type { AgentProfile } from "@openbot/ui/data";
 import { AgentAvatar } from "@openbot/ui/features/agents/AgentAvatar";
@@ -23,6 +23,8 @@ export interface ConversationHeaderProps {
   sidePanel?: SidePanelToggleProps | undefined;
   /** The thread tabs of the agent, after its name. */
   threads?: JSX.Element | undefined;
+  /** bubbles: pops the agent out to a desktop bubble, or brings it back. Missing where bubbles do not exist. */
+  popOut?: { poppedOut: boolean; onToggle: () => void } | undefined;
 }
 
 export interface ConversationHeaderPendingModel {
@@ -102,6 +104,22 @@ export function ConversationHeader(props: ConversationHeaderProps) {
               <Show when={control().active}>
                 <span class="remote-desktop-button-dot" aria-hidden="true" />
               </Show>
+            </Button>
+          )}
+        </Show>
+        {/* bubbles: pop out to a desktop bubble */}
+        <Show when={props.agent && props.popOut}>
+          {(popOut) => (
+            <Button
+              variant="ghost"
+              type="button"
+              class="header-panel-toggle"
+              aria-label={t(popOut().poppedOut ? "bubbles.bringBack" : "bubbles.popOut")}
+              title={t(popOut().poppedOut ? "bubbles.bringBack" : "bubbles.popOut")}
+              aria-pressed={popOut().poppedOut ? "true" : "false"}
+              onClick={() => popOut().onToggle()}
+            >
+              <PictureInPicture2 aria-hidden="true" />
             </Button>
           )}
         </Show>
