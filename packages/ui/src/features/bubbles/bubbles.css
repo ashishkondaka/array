@@ -148,36 +148,6 @@ html[data-bubble-window] body {
   will-change: transform;
 }
 
-/* At the theater: the character leans and looks toward the stage (`--bubble-gaze-x/y`, a unit
- * direction main sends), and breathes slowly, as someone watching does. */
-.bubble-orb[data-motion="watch"] .bubble-orb-body {
-  transform: translate(calc(var(--bubble-gaze-x, 0) * 3px), calc(var(--bubble-gaze-y, 0) * 3px))
-    rotate(calc(var(--bubble-gaze-x, 0) * 6deg));
-  animation: bubble-orb-breathe calc(var(--openbot-duration-slow) * 6) var(--openbot-ease-in-out) infinite alternate;
-  will-change: transform;
-}
-
-.bubble-orb[data-motion="watch"] .bubble-orb-avatar {
-  transform: translate(calc(var(--bubble-gaze-x, 0) * 4px), calc(var(--bubble-gaze-y, 0) * 4px));
-  transition: transform var(--openbot-duration-slow) var(--openbot-ease-out);
-}
-
-@keyframes bubble-orb-breathe {
-  from {
-    scale: 1;
-  }
-
-  to {
-    scale: 1.03;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bubble-orb[data-motion="watch"] .bubble-orb-body {
-    animation: none;
-  }
-}
-
 /* Two bubbles meet: a little jump and a tilt toward each other. */
 .bubble-orb[data-motion="greet"] .bubble-orb-body {
   animation: bubble-orb-greet calc(var(--openbot-duration-slow) * 2.5) var(--openbot-ease-out) both;
@@ -607,5 +577,36 @@ html[data-bubble-window="collapsed"] [data-sonner-toaster] {
   .bubble-window {
     --bubble-glass-rim: var(--openbot-border-strong);
     --bubble-glass-rim-soft: var(--openbot-border-strong);
+  }
+}
+
+/* Last, after every rule that styles the body or the avatar: the seat wins over resting. */
+/* At the theater: the character leans and looks toward the stage (`--bubble-gaze-x/y`, a unit
+ * direction main sends), and breathes slowly, as someone watching does. */
+.bubble-orb[data-motion="watch"] .bubble-orb-body {
+  transform: translate(calc(var(--bubble-gaze-x, 0) * 3px), calc(var(--bubble-gaze-y, 0) * 3px))
+    rotate(calc(var(--bubble-gaze-x, 0) * 6deg));
+  animation: bubble-orb-breathe calc(var(--openbot-duration-slow) * 6) var(--openbot-ease-in-out) infinite alternate;
+  will-change: transform;
+}
+
+.bubble-orb[data-motion="watch"] .bubble-orb-avatar {
+  transform: translate(calc(var(--bubble-gaze-x, 0) * 4px), calc(var(--bubble-gaze-y, 0) * 4px));
+  transition: transform var(--openbot-duration-slow) var(--openbot-ease-out);
+}
+
+@keyframes bubble-orb-breathe {
+  from {
+    scale: 1;
+  }
+
+  to {
+    scale: 1.03;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble-orb[data-motion="watch"] .bubble-orb-body {
+    animation: none;
   }
 }

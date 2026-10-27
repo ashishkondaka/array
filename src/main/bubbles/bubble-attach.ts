@@ -188,6 +188,10 @@ export class BubbleAttachController {
       const before = this.#scene.current;
       this.#scene = nextSceneState(this.#scene, detected);
       const now = this.#scene.current;
+      if (!sameStage(before, now)) {
+        if (now) logger.info(`A show started: ${now.window.appName} — ${now.window.title.slice(0, 60)}`);
+        else logger.info("The show ended; the bubbles go home.");
+      }
       if (!now) {
         if (before) bubbles.setScene(null);
         return;
