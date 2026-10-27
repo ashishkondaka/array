@@ -19,7 +19,7 @@ git grep -nE "(//|#|/\*\*?|\{/\*) bubbles:" -- ':!docs/bubbles'
 | `electron-builder.yml` | `appId: app.openbot.bubbles`, `productName`, placeholder icons, no `CFBundleIconName` |
 | `src/main/index.ts` | packaged `userData` = `OpenBot Bubbles`; `app.setName`; Windows app user model id; packaged icon variant `preview` |
 | `src/main/application-services.ts` | `PACKAGED_BUNDLE_IDENTIFIER`, ShipIt cache name, `bubblesUpdatesAllowed()` in the updater gate |
-| `scripts/verify-macos-package.ts` | expected bundle id, app path, no icon catalog |
+| `scripts/verify-macos-package.ts` | Array: bundle id, app path, executable and display name, placeholder icon, no icon catalog |
 | `build/bubbles/icon.icns` | new file, made from `build/icon-preview.png` |
 
 ## Phase 1: bubble windows

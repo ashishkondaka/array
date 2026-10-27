@@ -229,3 +229,20 @@ Rebase: `git fetch upstream` found no new commits on `upstream/main` (still `f91
 branches need no rebase today. To rebase later: `git fetch upstream && git rebase upstream/main` on
 the newest `bubbles/*` branch, fix conflicts by keeping upstream's change and putting each
 `bubbles:` hook back ([UPSTREAM_TOUCHPOINTS.md](UPSTREAM_TOUCHPOINTS.md)).
+
+Package: `bun run package` built `dist/mac-arm64/Array.app` (950 MB, arm64, unsigned, not notarized,
+updater off). `bun run verify:package` passes after pointing it at the fork's executable name and icon:
+bundle id `app.array.desktop`, runtimes, ASAR integrity, hardened fuses, and a launch plus
+second-instance check of the packaged app.
+
+## Status against the definition of done
+
+| Item | State |
+| --- | --- |
+| Clean clone + documented commands run the app with bubbles | Done ([DEV.md](DEV.md)) |
+| Two agents in bubbles, main window closed; messages, streaming, questions from the bubble; state survives restart | Done; closing the main window is by design (it hides), not run by hand. Approval cards share the question path, not run live |
+| Drop on window → context + Computer Use action with approval; browser handoff | Built and unit-tested (Option-drop). Not run live: the dev Electron binary has no Screen Recording / Accessibility grant on this computer |
+| `bun run check` passes | Not run: `AGENTS.md` asks not to run it locally. Run instead: `typecheck:node`, `typecheck:renderer`, `typecheck:storybook`, `check:ui`, `build`, `verify:preload`, `verify:package`, the pre-commit hook on every commit, and the bubble test files (53 tests) plus `ipc-channel-coverage.test.ts` |
+| Unit tests: state file, IPC validation, attach/detach transitions | Done (`bubble-state-file`, `bubbles-inputs`, `attach-target`, plus `bubble-layout`, `bubble-motion`, `local-analyst`) |
+| `docs/bubbles/` complete | Done: ARCHITECTURE, DEV, PROGRESS, UPSTREAM_TOUCHPOINTS, FINETUNE |
+| GIF of attach in `docs/bubbles/` | Not made: needs the Computer Use grants and a screen recording on this computer |

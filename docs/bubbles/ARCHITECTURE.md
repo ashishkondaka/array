@@ -1,4 +1,4 @@
-# OpenBot Bubbles: architecture
+# Array (OpenBot Bubbles fork): architecture
 
 Every OpenBot agent of the local host can be pulled out of the main window into an always-on-top
 bubble. A bubble is a collapsed orb (avatar plus status ring) or an expanded chat panel for that
@@ -126,18 +126,58 @@ to a current display's work area on restore.
 ### Drag
 
 The orb does not use `-webkit-app-region: drag`, because a drag region swallows the click that
-expands it. The orb sends pointer positions (`bubbles.dragTo`) and `bubbles.dragEnd`; main moves the
-window and, at the end, resolves the drop target. A pointer that moved less than 4 px is a click.
-The expanded panel header uses `-webkit-app-region: drag`; main saves its `moved` position.
+expands it. The orb sends pointer positions (`bubbles.dragTo`, coalesced per animation frame) and
+`bubbles.dragEnd(attach)`; main moves the window with `setPosition`. A press that moves less than
+4 pt is a click. A release is a placement exactly where the pointer let go: no momentum, no snapping.
+The expanded panel header is a drag region; main saves the panel's corner minus `PANEL_OFFSET`.
+
+Expanding opens the panel at `PANEL_OFFSET` from the orb's corner, so the header's avatar button is
+where the orb's centre was: a second click in place closes it.
+
+### Motion
+
+Main moves orbs on a critically damped spring (Apple's damping 1.0), advanced by real elapsed time and
+ticked at the display's refresh rate (8.3 ms on 120 Hz). Renderer motion animates `transform` and
+`opacity` only. A resting orb shows a still avatar; it animates while working, waiting or moving.
+
+- Hop: every 25–55 s a resting orb hops in place (CSS).
+- Nudge: on a new reply or question, the orb flies over the top centre of the front app window
+  (driver window list), hovers with a bob, and flies home after 4.5 s. Once a minute at most.
+- Visit: each bubble asks every 20–45 s divided by the number of others; main floats it (response
+  1.1 s) to one or two other orbs, both greet, the visited one is bumped and springs back, and the
+  visitor floats home.
+- The tray toggle "Lively bubbles" (`nudges` in the state file) turns nudges and visits off; reduced
+  motion turns all of it off in the renderer.
 
 ### Attention
 
 Bubble windows join `appWindows()` in `renderer-forwarders.ts`, so they receive every `agent:event`
-the main window gets, including attention, and answer through the same `agent.respondTo*` IPC.
+the main window gets, including attention, and answer through the same `agent.respondTo*` IPC. A
+notification click about a local agent with a bubble opens the bubble (`revealBubble`).
 
 ### Attach
 
-On `dragEnd` main asks `CuaDriverDaemonClient.listWindows()` for the frontmost on-screen window
-under the pointer, ignoring OpenBot's own pids. It snaps the orb to that window's top-right corner
-and stores `attached` in the bubble state. Main hands the attachment to `AgentService`, and
-`drain-scheduler.ts` prepends an `<openbot_attached_window>` block to each turn while attached.
+Attaching is opt-in: a drag with Option (Alt) held. While it is held and the orb rests 250 ms, main
+asks `CuaDriverDaemonClient.listWindows()` (OpenBot's own daemon, so grants stay OpenBot's) for the
+frontmost window under the pointer, looking through the bubble windows, and the orb shows
+"Release to attach to <App>". On release it attaches, snaps to the window's top-right corner, and
+follows it (2 s poll while anything is attached). A drop without Option detaches an attached orb.
+`drain-scheduler.ts` prepends an `<openbot_attached_window>` block (app, title, pid, window_id,
+bounds, "call get_window_state first, act only in this window") to each turn of an attached agent.
+A known browser's address bar is read with a small `get_window_state` query, and the bubble offers
+"Open in OpenBot browser" (`BrowserHost.open(url, null, agentId)`).
+
+### Characters, chats, local analyst
+
+- Characters (`bubble-characters.ts`): eight body shape and colour pairs of the avatar engine,
+  chosen per agent in the sidebar menu, saved in the state file's `characters`.
+- Chats (`features/chats/new-chat.ts`): agents with the "Chat" badge, workspace-only access, no
+  Computer Use, told to answer directly. No schema change.
+- Local Analyst (`local-analyst.ts`): saves Ollama/LM Studio as a custom endpoint on first find, and
+  creates the agent once OpenCode lists the model.
+
+### Name and glass
+
+The fork is named Array (`fork-identity.ts`, `package.json`, `electron-builder.yml`,
+`bubbles-dev-name.ts` for dev). The transparent window is on by default and `array-glass.css` makes it
+a frosted, mostly opaque Liquid Glass.

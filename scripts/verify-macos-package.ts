@@ -40,10 +40,10 @@ const appPath = resolve(
   process.argv[2] ?? (architecture === "arm64" ? "dist/mac-arm64/Array.app" : "dist/mac/Array.app"), // bubbles: fork name
 );
 const contentsPath = resolve(appPath, "Contents");
-const executablePath = resolve(contentsPath, "MacOS/OpenBot");
+const executablePath = resolve(contentsPath, "MacOS/Array"); // bubbles: fork name
 const resourcesPath = resolve(contentsPath, "Resources");
 const packagedIconPath = resolve(resourcesPath, "icon.icns");
-const sourceIconPath = resolve("build/icon-production.icns");
+const sourceIconPath = resolve("build/bubbles/icon.icns"); // bubbles: placeholder icon
 const packagedIconCatalogPath = resolve(resourcesPath, "Assets.car");
 const sourceIconCatalogPath = resolve("build/macos/Assets.car");
 const plistPath = resolve(contentsPath, "Info.plist");
@@ -115,8 +115,8 @@ await assertAbsent(
 
 const plist = JSON.parse(run("plutil", ["-convert", "json", "-o", "-", plistPath]));
 if (!isDynamicRecord(plist)) throw new Error("Info.plist is not a JSON object.");
-expectEqual(plist.CFBundleDisplayName, "OpenBot", "display name");
-expectEqual(plist.CFBundleExecutable, "OpenBot", "executable name");
+expectEqual(plist.CFBundleDisplayName, "Array", "display name"); // bubbles: fork name
+expectEqual(plist.CFBundleExecutable, "Array", "executable name");
 expectEqual(plist.CFBundleIdentifier, "app.array.desktop", "bundle identifier"); // bubbles: fork app id
 expectEqual(plist.CFBundleIconFile, "icon.icns", "application icon");
 expectEqual(plist.CFBundleIconName, undefined, "macOS 26 application icon"); // bubbles: placeholder icon has no catalog
@@ -220,7 +220,7 @@ async function assertAbsent(path: string): Promise<void> {
 async function verifyPackagedIcon(packagedPath: string, sourcePath: string): Promise<void> {
   const [packagedIcon, sourceIcon] = await Promise.all([readFile(packagedPath), readFile(sourcePath)]);
   if (!packagedIcon.equals(sourceIcon)) {
-    throw new Error("The packaged macOS icon does not match build/icon-production.icns.");
+    throw new Error(`The packaged macOS icon does not match ${sourcePath}.`);
   }
 
   const iconRoot = await mkdtemp(join(tmpdir(), "openbot-icon-"));
