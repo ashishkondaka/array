@@ -122,17 +122,11 @@ html[data-bubble-window] body {
 /* Armed over a window: the edge glows in the accent and breathes, like a magnet that has caught. */
 .bubble-orb[data-motion="armed"] .bubble-orb-ring {
   border-color: var(--openbot-accent);
-  animation: bubble-orb-armed var(--openbot-duration-slow) var(--openbot-ease-in-out) infinite alternate;
 }
 
-@keyframes bubble-orb-armed {
-  from {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--openbot-accent) 45%, transparent);
-  }
-
-  to {
-    box-shadow: 0 0 0 var(--openbot-space-1-5) color-mix(in oklab, var(--openbot-accent) 25%, transparent);
-  }
+.bubble-orb[data-motion="armed"] .bubble-orb-ring::after {
+  --bubble-halo: color-mix(in oklab, var(--openbot-accent) 35%, transparent);
+  animation: bubble-orb-pulse var(--openbot-duration-slow) var(--openbot-ease-in-out) infinite alternate;
 }
 
 .bubble-orb[data-motion="hop"] .bubble-orb-body {
@@ -220,17 +214,33 @@ html[data-bubble-window] body {
 
 .bubble-orb[data-status="attention"] .bubble-orb-ring {
   border-color: var(--openbot-warning);
+}
+
+/* The pulse is a halo that scales and fades: transform and opacity only, so the compositor runs it
+ * without a paint per frame. Only an orb that needs an answer (or is armed) runs it. */
+.bubble-orb-ring::after {
+  position: absolute;
+  inset: calc(var(--bubble-ring-width) * -1);
+  border-radius: inherit;
+  background: var(--bubble-halo, transparent);
+  content: "";
+  opacity: 0;
+}
+
+.bubble-orb[data-status="attention"] .bubble-orb-ring::after {
+  --bubble-halo: var(--openbot-warning-soft);
   animation: bubble-orb-pulse var(--openbot-duration-slow) var(--openbot-ease-in-out) infinite alternate;
 }
 
-/* Only an orb that needs an answer runs an animation; an idle orb paints nothing, so it costs no frames. */
 @keyframes bubble-orb-pulse {
   from {
-    box-shadow: 0 0 0 0 var(--openbot-warning-soft);
+    opacity: 0.2;
+    transform: scale(1);
   }
 
   to {
-    box-shadow: 0 0 0 var(--openbot-space-1-5) var(--openbot-warning-soft);
+    opacity: 1;
+    transform: scale(1.12);
   }
 }
 
@@ -447,13 +457,14 @@ html[data-bubble-window="collapsed"] [data-sonner-toaster] {
     transition: none;
   }
 
-  .bubble-orb[data-motion="armed"] .bubble-orb-ring {
+  .bubble-orb[data-motion="armed"] .bubble-orb-ring::after {
     animation: none;
+    opacity: 1;
   }
 
-  .bubble-orb[data-status="attention"] .bubble-orb-ring {
+  .bubble-orb[data-status="attention"] .bubble-orb-ring::after {
     animation: none;
-    box-shadow: 0 0 0 var(--openbot-space-1) var(--openbot-warning-soft);
+    opacity: 1;
   }
 }
 

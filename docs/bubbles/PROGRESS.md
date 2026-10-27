@@ -185,3 +185,27 @@ it off; the bubble does not override the agent's setting.
   saved choice in Settings still wins. `src/renderer/src/styles/array-glass.css` makes it frosted and
   mostly opaque, and gives the sidebar, composer, menus and dialogs the bubbles' glass material.
   Reduced transparency turns it solid.
+
+## Phase 5: polish (`bubbles/phase-5-polish`)
+
+Edge cases:
+
+- Display removed or changed (`display-removed`, `display-metrics-changed`): every orb is clamped
+  onto a display that remains, the primary one when its own is gone.
+- Agent deleted while popped out: its bubble closes and its state is dropped (`agents-changed`).
+- Two bubbles snapped to one window: the second is offset downwards (`separateOrb`).
+- Reduced motion: no hops, nudge flights, wiggles or pulses; a still halo shows attention.
+- A bubble closed from inside (Cmd+W, a reload) collapses; a crashed one reopens once per 10 s.
+
+Idle cost (`bun run dev:cpu --duration=20000`, files in `.openbot-build/dev-automation/cpu/`):
+
+| Run | Total CPU | Bubble renderers |
+| --- | --- | --- |
+| No bubbles | 1.3 % | n/a |
+| Three collapsed bubbles, first build | 18.1–23.9 % | up to 52 ms/s task, 25 style recalcs/s |
+| Three collapsed bubbles, fixed | 0.8 % | 0 ms/s each |
+
+The cost was the avatar: an agent with a recent reply has a "responded" mood that animates the
+avatar engine at 30 fps on every orb, and the attention pulse animated `box-shadow` (a paint per
+frame). A resting orb now shows a still avatar (the ring carries the status), and the pulse is a halo
+that animates `transform` and `opacity` only.

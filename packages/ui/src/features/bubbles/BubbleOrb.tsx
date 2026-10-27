@@ -76,7 +76,9 @@ export function BubbleOrb(props: BubbleOrbProps) {
             hue={props.character ? props.character.hue : props.agent.avatarHue}
             url={props.character ? null : props.agent.avatarUrl}
             shape={props.character?.shape}
-            mood={props.mood}
+            // A resting orb holds still: a busy mood would keep the avatar drawing 30 times a second on
+            // every orb on the desktop. The ring carries the status meanwhile.
+            mood={lively() ? props.mood : "idle"}
             motion={lively() ? "always" : "hover"}
             fps={props.motion === "rest" ? undefined : MOVING_FPS}
             class="bubble-orb-avatar"

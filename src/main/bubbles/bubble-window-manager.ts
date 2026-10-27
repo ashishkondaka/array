@@ -115,6 +115,8 @@ export class BubbleWindowManager {
   #frontWindow: () => Promise<BubbleBounds | null> = async () => null;
   #destroyed = false;
   readonly #lastReopen = new Map<string, number>();
+  #displaysWatched = false;
+  #unwatchDisplays: () => void = () => undefined;
 
   constructor(options: BubbleWindowManagerOptions) {
     this.#options = options;
@@ -136,6 +138,7 @@ export class BubbleWindowManager {
 
   /** Reads the saved bubbles and opens each one whose agent still exists. */
   restore(): Effect.Effect<void> {
+    this.#watchDisplays();
     return Effect.gen({ self: this }, function* () {
       yield* this.#store
         .load()
@@ -433,8 +436,33 @@ export class BubbleWindowManager {
     this.#syncTray();
   }
 
+  /**
+   * A display that goes away (a disconnected monitor, a closed lid) takes no orb with it: every orb
+   * is kept on a display that remains, the primary one when its own is gone. Once, after app ready.
+   */
+  #watchDisplays(): void {
+    if (this.#displaysWatched) return;
+    this.#displaysWatched = true;
+    const reclamp = () => {
+      if (this.#destroyed) return;
+      const workAreas = this.#workAreas();
+      for (const bubble of this.#state.bubbles) {
+        const next = clampOrb(bubble, workAreas);
+        if (next.x !== bubble.x || next.y !== bubble.y)
+          this.#update(bubble.agentId, (current) => ({ ...current, ...next }));
+      }
+    };
+    screen.on("display-removed", reclamp);
+    screen.on("display-metrics-changed", reclamp);
+    this.#unwatchDisplays = () => {
+      screen.off("display-removed", reclamp);
+      screen.off("display-metrics-changed", reclamp);
+    };
+  }
+
   destroy(): void {
     this.#destroyed = true;
+    this.#unwatchDisplays();
     if (this.#shortcutRegistered) globalShortcut.unregister(BUBBLES_TOGGLE_SHORTCUT);
     this.#shortcutRegistered = false;
     this.#tray?.destroy();
