@@ -865,7 +865,8 @@ export const IPC_ENDPOINTS = {
     setHidden: request<boolean, void>()("bubbles:set-hidden"),
     /** Only the bubble that the pointer drags sends these. */
     dragTo: request<BubbleDragPoint, void>()("bubbles:drag-to"),
-    dragEnd: request<undefined, void>()("bubbles:drag-end"),
+    /** True when Option (Alt) is held at release: attach to the window under the pointer. */
+    dragEnd: request<boolean, void>()("bubbles:drag-end"),
     /** The character a bubble wears, chosen in the main window. */
     setCharacter: request<BubbleCharacterInput, void>()("bubbles:set-character"),
     setNudges: request<boolean, void>()("bubbles:set-nudges"),

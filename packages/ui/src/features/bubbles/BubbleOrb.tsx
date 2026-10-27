@@ -63,7 +63,7 @@ export function BubbleOrb(props: BubbleOrbProps) {
         data-status={props.status}
         data-motion={props.motion}
         aria-label={`${t("bubbles.expand", { name: props.agent.name })}. ${statusLabel()}`}
-        title={props.attachHint ?? `${props.agent.name} · ${statusLabel()}`}
+        title={props.attachHint ?? `${props.agent.name} · ${statusLabel()}\n${t("bubbles.attachTip")}`}
         onPointerDown={props.onPointerDown}
         onPointerMove={props.onPointerMove}
         onPointerUp={props.onPointerUp}

@@ -96,7 +96,7 @@ const Bubbles = createSimpleContext({
       openPermissionPane: (permission: MacPermissionId) =>
         send(bubblesPort().computerUse.openPermissionPane(permission)),
       dragTo: (point: BubbleDragPoint) => send(port().dragTo(point)),
-      dragEnd: () => send(port().dragEnd()),
+      dragEnd: (attach: boolean) => send(port().dragEnd(attach)),
     };
   },
 });

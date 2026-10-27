@@ -7,6 +7,7 @@ import {
   dropOutcome,
   dropTarget,
   followAttachment,
+  frontWindow,
   readBrowserAddress,
   readDesktopWindows,
   snappedPosition,
@@ -54,6 +55,19 @@ describe("drop targets", () => {
       record(3, { bounds: { x: 1000, y: 0, width: 800, height: 600 } }),
     );
     expect(dropTarget(list, { x: 10, y: 10 }, OWN_PID, new Set())).toBeNull();
+  });
+});
+
+describe("the front window", () => {
+  it("is the highest window that is not a bubble or too small", () => {
+    const list = windows(
+      record(1, { z: 2 }),
+      record(2, { z: 9, pid: OWN_PID }),
+      record(3, { z: 20, bounds: { x: 0, y: 0, width: 50, height: 50 } }),
+      record(4, { z: 30 }),
+    );
+    expect(frontWindow(list, new Set([4]))?.windowId).toBe(2);
+    expect(frontWindow(windows(record(1, { z: null })), new Set())).toBeNull();
   });
 });
 

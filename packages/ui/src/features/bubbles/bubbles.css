@@ -140,8 +140,12 @@ html[data-bubble-window] body {
   will-change: transform;
 }
 
+/* A nudge: one wiggle to catch the eye, then a slow hover bob over the app. */
 .bubble-orb[data-motion="nudge"] .bubble-orb-body {
-  animation: bubble-orb-wiggle var(--openbot-duration-slow) var(--openbot-ease-in-out) 3 both;
+  animation:
+    bubble-orb-wiggle var(--openbot-duration-slow) var(--openbot-ease-in-out) both,
+    bubble-orb-hover calc(var(--openbot-duration-slow) * 2) var(--openbot-ease-in-out) var(--openbot-duration-slow)
+    infinite alternate;
   will-change: transform;
 }
 
@@ -165,6 +169,16 @@ html[data-bubble-window] body {
 
   100% {
     transform: translateY(0) scale(1, 1);
+  }
+}
+
+@keyframes bubble-orb-hover {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-10%);
   }
 }
 

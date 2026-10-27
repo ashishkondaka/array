@@ -110,6 +110,31 @@ export function dropTarget(
   return front && front.pid !== ownPid ? front : null;
 }
 
+/**
+ * The app window in front, which a nudging orb hovers over. OpenBot's main window counts, the
+ * bubbles do not. Null when the driver gives no stacking order to tell the front by.
+ */
+export function frontWindow(
+  windows: readonly DesktopWindow[],
+  bubbleWindowIds: ReadonlySet<number>,
+): DesktopWindow | null {
+  let front: DesktopWindow | null = null;
+  for (const window of windows) {
+    if (
+      bubbleWindowIds.has(window.windowId) ||
+      !window.onScreen ||
+      !window.onCurrentSpace ||
+      window.appName === DRIVER_OVERLAY_APP ||
+      window.zIndex === null ||
+      window.bounds.width < MINIMUM_TARGET_SIZE ||
+      window.bounds.height < MINIMUM_TARGET_SIZE
+    )
+      continue;
+    if (!front || (front.zIndex ?? 0) < window.zIndex) front = window;
+  }
+  return front;
+}
+
 /** The attached orb sits in the window's top-right corner; its chip reads leftwards from it. */
 export function snappedPosition(bounds: BubbleBounds): { x: number; y: number } {
   return {

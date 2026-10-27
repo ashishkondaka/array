@@ -20,6 +20,7 @@ import {
   dropOutcome,
   dropTarget,
   followAttachment,
+  frontWindow,
   isKnownBrowser,
   readBrowserAddress,
   readDesktopWindows,
@@ -76,9 +77,19 @@ export class BubbleAttachController {
     options.bubbles.setAttachHandler({
       dwell: (agentId, pointer) => void Effect.runPromise(this.#dwell(agentId, pointer)),
       disarm: (agentId) => this.#disarm(agentId),
-      release: (agentId) => this.#release(agentId),
+      release: (agentId, attach, pointer) => this.#release(agentId, attach, pointer),
     });
     setAttachedWindowSource((agentId) => options.bubbles.bubble(agentId)?.attached ?? null);
+    options.bubbles.setFrontWindowSource(() =>
+      options.driverReady()
+        ? Effect.runPromise(
+            this.#windows().pipe(
+              Effect.map((windows) => frontWindow(windows, options.bubbleWindowIds())?.bounds ?? null),
+              Effect.catch(() => Effect.succeed(null)),
+            ),
+          )
+        : Promise.resolve(null),
+    );
     this.#syncFollow();
   }
 
@@ -136,19 +147,34 @@ export class BubbleAttachController {
   }
 
   /**
-   * The drag ended. Armed over a window: attach to it (or stay attached) and snap to its corner.
-   * Not armed: a free placement, so an attached bubble that was dragged away detaches where it was let go.
+   * The drag ended. Without Option (Alt) it is a free placement: nothing attaches, and an attached
+   * bubble dragged off detaches where it was let go. With it, the bubble attaches to the window it
+   * rests over, found now if no hint was shown yet.
    */
-  #release(agentId: string): boolean {
+  #release(agentId: string, attach: boolean, pointer: { x: number; y: number }): boolean {
     const armed = this.#armed.get(agentId) ?? null;
     this.#disarm(agentId);
     const bubble = this.#options.bubbles.bubble(agentId);
     if (!bubble) return false;
-    const outcome = dropOutcome(bubble, armed);
-    if (outcome.kind === "detach") this.detach(agentId);
-    if (outcome.kind === "detach" || outcome.kind === "none" || !armed) return false;
-    this.#options.reportIssue(agentId, null);
-    void Effect.runPromise(this.#attach(agentId, armed, outcome.kind === "attach"));
+    if (!attach) {
+      if (bubble.attached) this.detach(agentId);
+      return false;
+    }
+    if (!this.#options.driverReady()) {
+      this.#options.reportIssue(agentId, attachIssue(this.#options.driverState()));
+      return false;
+    }
+    void Effect.runPromise(
+      Effect.gen({ self: this }, function* () {
+        const target =
+          armed ?? dropTarget(yield* this.#windows(), pointer, this.#options.ownPid, this.#options.bubbleWindowIds());
+        const outcome = dropOutcome(bubble, target);
+        if (outcome.kind === "detach") this.detach(agentId);
+        if (!target || outcome.kind === "detach" || outcome.kind === "none") return;
+        this.#options.reportIssue(agentId, null);
+        yield* this.#attach(agentId, target, outcome.kind === "attach");
+      }).pipe(Effect.catch((error) => Effect.sync(() => logger.warn("Could not attach a bubble:", toLogValue(error))))),
+    );
     return true;
   }
 

@@ -24,17 +24,7 @@ import { PreferenceStore } from "../preference-file";
 import { sendToRenderer } from "../renderer-ipc";
 import { isTrustedRendererUrl } from "../trusted-renderer";
 import { clampOrb, defaultOrbPosition, expandedBounds, orbSize, separateOrb } from "./bubble-layout";
-import {
-  type DragSample,
-  NUDGE_MIN_DISTANCE,
-  nudgeTarget,
-  releaseVelocity,
-  type SpringState,
-  springSettled,
-  springStep,
-  THROW_MIN_SPEED,
-  throwTarget,
-} from "./bubble-motion";
+import { NUDGE_MIN_DISTANCE, nudgeTarget, type SpringState, springSettled, springStep } from "./bubble-motion";
 import { BUBBLES_STATE_FILE, copyBubble, decodeBubblesFile, EMPTY_BUBBLES, newBubble } from "./bubble-state-file";
 import { setBubbleWindowSource } from "./bubble-window-registry";
 
@@ -52,16 +42,19 @@ export interface BubbleAgent {
 
 /** What happens when a dragged orb is released. Phase 3 attaches it to the window under the pointer. */
 /**
- * Drag-to-attach, as main's drag sees it. Attaching is deliberate: the orb has to rest over a window
- * for a moment (`dwell`) before a release attaches it; a release anywhere else is a free placement.
+ * Drag-to-attach, as main's drag sees it. Attaching is deliberate: only a drag with Option (Alt) held
+ * attaches. While it is held and the orb rests, `dwell` shows which window it would attach to.
  */
 export interface BubbleAttachHandler {
   /** The pointer has rested over one place mid-drag. */
   dwell: (agentId: string, pointer: { x: number; y: number }) => void;
   /** The drag moved on after a dwell. */
   disarm: (agentId: string) => void;
-  /** The drag ended. True when the release attaches the bubble, which then snaps instead of gliding. */
-  release: (agentId: string) => boolean;
+  /**
+   * The drag ended. `attach` is Option (Alt) held at release; without it the release is always a free
+   * placement. True when the bubble attaches, which then snaps instead of gliding.
+   */
+  release: (agentId: string, attach: boolean, pointer: { x: number; y: number }) => boolean;
 }
 
 export interface BubbleWindowManagerOptions {
@@ -83,8 +76,6 @@ interface OpenBubble {
   dragging: boolean;
   /** The frame timer of a nudge in flight; the orb is away from its saved place while it runs. */
   nudge: ReturnType<typeof setInterval> | null;
-  /** The drag's recent pointer samples, for the release velocity. */
-  samples: DragSample[];
   /** Fires when the pointer rests mid-drag. */
   dwellTimer: ReturnType<typeof setTimeout> | null;
   /** Where the orb was when it rested, so a small tremor does not disarm. */
@@ -94,14 +85,14 @@ interface OpenBubble {
   lastNudgeAt: number;
 }
 
-/** How long the pointer rests over a window mid-drag before a release would attach to it. */
-const DWELL_MS = 600;
+/** How long the orb rests, with Option held, before it shows the window it would attach to. */
+const DWELL_MS = 250;
 /** How far the orb may drift and still count as resting. */
 const DWELL_TOLERANCE = 24;
 /** One nudge a minute at most for each orb: a nudge that repeats is noise. */
 const NUDGE_INTERVAL_MS = 60_000;
-/** How long the orb waits beside the pointer before it goes home. */
-const NUDGE_HOLD_MS = 3_500;
+/** How long the orb hovers over the app before it goes home. */
+const NUDGE_HOLD_MS = 4_500;
 /** The orb moves once per display frame: 8.3 ms on a 120 Hz display, never slower than 60 Hz. */
 function frameInterval(point: { x: number; y: number }): number {
   const frequency = screen.getDisplayNearestPoint(point).displayFrequency;
@@ -120,6 +111,8 @@ export class BubbleWindowManager {
   #trayIcon: NativeImage | null = null;
   #shortcutRegistered = false;
   #attachHandler: BubbleAttachHandler | null = null;
+  /** The app window in front, which a nudge hovers over; null without the Computer Use driver. */
+  #frontWindow: () => Promise<BubbleBounds | null> = async () => null;
   #destroyed = false;
   readonly #lastReopen = new Map<string, number>();
 
@@ -197,6 +190,10 @@ export class BubbleWindowManager {
 
   setAttachHandler(handler: BubbleAttachHandler): void {
     this.#attachHandler = handler;
+  }
+
+  setFrontWindowSource(read: () => Promise<BubbleBounds | null>): void {
+    this.#frontWindow = read;
   }
 
   /** Tells a dragged bubble which app it would attach to on release, or null. */
@@ -300,8 +297,20 @@ export class BubbleWindowManager {
     const now = Date.now();
     if (now - open.lastNudgeAt < NUDGE_INTERVAL_MS) return;
     open.lastNudgeAt = now;
-    const away = nudgeTarget(screen.getCursorScreenPoint(), this.#workAreas());
-    if (Math.hypot(away.x - bubble.x, away.y - bubble.y) < NUDGE_MIN_DISTANCE) return;
+    void this.#frontWindow()
+      .catch(() => null)
+      .then((front) => {
+        const current = this.#find(agentId);
+        // The user may have grabbed or opened it while the window list was read.
+        if (!current || current.expanded || open.dragging || open.window.isDestroyed()) return;
+        const away = nudgeTarget(front, screen.getCursorScreenPoint(), this.#workAreas());
+        if (Math.hypot(away.x - current.x, away.y - current.y) < NUDGE_MIN_DISTANCE) return;
+        this.#hoverThenReturn(agentId, open, away);
+      });
+  }
+
+  /** Flies to `away`, hovers there while the renderer bobs the character, and flies home. */
+  #hoverThenReturn(agentId: string, open: OpenBubble, away: { x: number; y: number }): void {
     open.window.showInactive();
     this.#travel(agentId, away, () => {
       open.homeTimer = setTimeout(() => {
@@ -312,21 +321,13 @@ export class BubbleWindowManager {
     });
   }
 
-  /**
-   * Moves a collapsed orb to `to` on the spring, frame by frame, without saving the position. It
-   * starts at `velocity`, so a thrown orb keeps the speed of the hand that let it go: no seam.
-   */
-  #travel(
-    agentId: string,
-    to: { x: number; y: number },
-    done: () => void,
-    velocity: { x: number; y: number } = { x: 0, y: 0 },
-  ): void {
+  /** Moves a collapsed orb to `to` on the spring, frame by frame, without saving the position. */
+  #travel(agentId: string, to: { x: number; y: number }, done: () => void): void {
     const open = this.#open.get(agentId);
     if (!open || open.window.isDestroyed()) return;
     const [startX = to.x, startY = to.y] = open.window.getPosition();
-    let x: SpringState = { position: startX, velocity: velocity.x };
-    let y: SpringState = { position: startY, velocity: velocity.y };
+    let x: SpringState = { position: startX, velocity: 0 };
+    let y: SpringState = { position: startY, velocity: 0 };
     const size = orbSize(this.#find(agentId) ?? { attached: null });
     if (open.nudge) clearInterval(open.nudge);
     // The spring advances by the time that really passed, so a late timer tick moves the orb further
@@ -374,24 +375,28 @@ export class BubbleWindowManager {
     // The orb is grabbed where it is, even mid-nudge; it is not snapped home first.
     this.#stopNudge(agentId, false);
     open.dragging = true;
-    const now = performance.now();
-    open.samples = [...open.samples.filter((sample) => now - sample.at < 200), { ...point, at: now }];
-    // Moving on from a rest disarms the attach; a tremor of a few points does not.
-    if (open.dwellAt && Math.hypot(point.x - open.dwellAt.x, point.y - open.dwellAt.y) > DWELL_TOLERANCE) {
+    // Moving on, or letting go of Option, disarms the attach hint; a tremor of a few points does not.
+    const moved = open.dwellAt && Math.hypot(point.x - open.dwellAt.x, point.y - open.dwellAt.y) > DWELL_TOLERANCE;
+    if (open.dwellAt && (moved || !point.attach)) {
       open.dwellAt = null;
       this.#attachHandler?.disarm(agentId);
     }
     if (open.dwellTimer) clearTimeout(open.dwellTimer);
-    open.dwellTimer = setTimeout(() => {
-      open.dwellTimer = null;
-      if (!open.dragging || open.dwellAt) return;
-      open.dwellAt = { ...point };
-      this.#attachHandler?.dwell(agentId, screen.getCursorScreenPoint());
-    }, DWELL_MS);
-    this.#setBounds(open, { ...point, ...orbSize(this.#find(agentId) ?? { attached: null }) });
+    open.dwellTimer = point.attach
+      ? setTimeout(() => {
+          open.dwellTimer = null;
+          if (!open.dragging || open.dwellAt) return;
+          open.dwellAt = { x: point.x, y: point.y };
+          this.#attachHandler?.dwell(agentId, screen.getCursorScreenPoint());
+        }, DWELL_MS)
+      : null;
+    // Position only: the size does not change mid-drag, and a resize per frame would make it judder.
+    open.settingBounds = true;
+    open.window.setPosition(point.x, point.y);
+    open.settingBounds = false;
   }
 
-  dragEnd(agentId: string): void {
+  dragEnd(agentId: string, attach: boolean): void {
     const open = this.#open.get(agentId);
     if (!open || open.window.isDestroyed()) return;
     const wasDragging = open.dragging;
@@ -399,22 +404,11 @@ export class BubbleWindowManager {
     if (open.dwellTimer) clearTimeout(open.dwellTimer);
     open.dwellTimer = null;
     open.dwellAt = null;
-    const velocity = releaseVelocity(open.samples);
-    open.samples = [];
     if (!wasDragging) return;
     const [x = 0, y = 0] = open.window.getPosition();
     this.#update(agentId, (bubble) => ({ ...bubble, x, y }));
-    // An attach snaps the orb itself. Anything else is a free placement: a slow release stays put,
-    // a throw glides on, projected from its momentum, and settles where it lands.
-    if (this.#attachHandler?.release(agentId)) return;
-    if (Math.hypot(velocity.x, velocity.y) < THROW_MIN_SPEED) return;
-    const target = throwTarget({ x, y }, velocity, this.#workAreas());
-    this.#travel(
-      agentId,
-      target,
-      () => this.#update(agentId, (bubble) => (bubble.expanded ? bubble : { ...bubble, ...target })),
-      velocity,
-    );
+    // The orb stays exactly where it was let go; only an Option-drop attaches (and snaps).
+    this.#attachHandler?.release(agentId, attach, screen.getCursorScreenPoint());
   }
 
   /** Sets a bubble's state from outside, such as an attach. Main moves the window to match. */
@@ -543,7 +537,6 @@ export class BubbleWindowManager {
       nudge: null,
       homeTimer: null,
       lastNudgeAt: 0,
-      samples: [],
       dwellTimer: null,
       dwellAt: null,
     };
@@ -562,8 +555,10 @@ export class BubbleWindowManager {
       if (this.#find(bubble.agentId)?.expanded) this.setExpanded(bubble.agentId, false);
     });
     // The panel header is a drag region, so the window moves itself while it is expanded.
+    // Only the expanded panel moves itself (its header is a drag region). A collapsed orb moves only
+    // through main, which saves its own moves, so a late `moved` from one of those is ignored.
     window.on("moved", () => {
-      if (open.settingBounds || open.dragging) return;
+      if (open.settingBounds || open.dragging || !this.#find(bubble.agentId)?.expanded) return;
       const [x = 0, y = 0] = window.getPosition();
       this.#updateSilently(bubble.agentId, (current) => ({ ...current, x, y }));
     });

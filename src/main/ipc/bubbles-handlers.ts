@@ -8,6 +8,7 @@ import type { BubbleAttachController } from "../bubbles/bubble-attach";
 import type { BubbleWindowManager } from "../bubbles/bubble-window-manager";
 import {
   parseBubbleAgentId,
+  parseBubbleAttachOnRelease,
   parseBubbleCharacter,
   parseBubbleDragPoint,
   parseBubbleExpanded,
@@ -45,7 +46,9 @@ export function bubblesIpcHandlers({ bubbles, attach }: BubblesIpcDependencies):
       dragTo: authorizedHandler(fromBubble, parseBubbleDragPoint, (event, point) =>
         bubbles.dragTo(requireBubbleSender(bubbles, event.sender.id), point),
       ),
-      dragEnd: eventHandler((event) => bubbles.dragEnd(requireBubbleSender(bubbles, event.sender.id))),
+      dragEnd: authorizedHandler(fromBubble, parseBubbleAttachOnRelease, (event, attach) =>
+        bubbles.dragEnd(requireBubbleSender(bubbles, event.sender.id), attach),
+      ),
       setCharacter: payloadHandler(parseBubbleCharacter, ({ agentId, character }) =>
         bubbles.setCharacter(agentId, character),
       ),

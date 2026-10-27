@@ -114,6 +114,8 @@ export interface BubbleAttachHint {
 export interface BubbleDragPoint {
   x: number;
   y: number;
+  /** Option (Alt) is held: a release attaches to the window under the pointer. Otherwise it never does. */
+  attach: boolean;
 }
 
 export interface BubbleExpandedInput {
@@ -202,7 +204,7 @@ export function isBubbleAttachStatus(value: unknown): value is BubbleAttachStatu
 }
 
 export function isBubbleDragPoint(value: unknown): value is BubbleDragPoint {
-  return isDynamicRecord(value) && isCoordinate(value.x) && isCoordinate(value.y);
+  return isDynamicRecord(value) && isCoordinate(value.x) && isCoordinate(value.y) && isBoolean(value.attach);
 }
 
 export function isBubbleAttachHint(value: unknown): value is BubbleAttachHint {

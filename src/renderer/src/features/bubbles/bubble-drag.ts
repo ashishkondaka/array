@@ -14,8 +14,9 @@ interface Press {
 }
 
 export interface BubbleDragOptions {
-  moveTo: (point: { x: number; y: number }) => void;
-  end: () => void;
+  /** `attach`: Option (Alt) is held, so a release attaches to the window under the pointer. */
+  moveTo: (point: { x: number; y: number; attach: boolean }) => void;
+  end: (attach: boolean) => void;
   click: () => void;
   /** The orb is picked up (true) or put down (false): it lifts while it is carried. */
   lift: (lifted: boolean) => void;
@@ -24,7 +25,7 @@ export interface BubbleDragOptions {
 export function createBubbleDrag(options: BubbleDragOptions) {
   let press: Press | null = null;
   let suppressClick = false;
-  let pending: { x: number; y: number } | null = null;
+  let pending: { x: number; y: number; attach: boolean } | null = null;
   let frame = 0;
 
   // At most one move per frame: a pointer reports faster than a window can move.
@@ -52,10 +53,14 @@ export function createBubbleDrag(options: BubbleDragOptions) {
         return;
       if (!press.dragging) options.lift(true);
       press.dragging = true;
-      pending = { x: Math.round(event.screenX - press.offsetX), y: Math.round(event.screenY - press.offsetY) };
+      pending = {
+        x: Math.round(event.screenX - press.offsetX),
+        y: Math.round(event.screenY - press.offsetY),
+        attach: event.altKey,
+      };
       if (!frame) frame = requestAnimationFrame(flushMove);
     },
-    pointerUp(): void {
+    pointerUp(event: PointerEvent): void {
       const ended = press;
       press = null;
       if (!ended?.dragging) return;
@@ -63,7 +68,7 @@ export function createBubbleDrag(options: BubbleDragOptions) {
       flushMove();
       suppressClick = true;
       options.lift(false);
-      options.end();
+      options.end(event.altKey);
     },
     click(): void {
       if (suppressClick) {

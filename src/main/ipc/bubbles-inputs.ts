@@ -26,11 +26,16 @@ export function parseBubbleHidden(input: unknown): boolean {
   return input;
 }
 
+export function parseBubbleAttachOnRelease(input: unknown): boolean {
+  if (!isBoolean(input)) throw new Error("Attach must be a boolean.");
+  return input;
+}
+
 export function parseBubbleDragPoint(input: unknown): BubbleDragPoint {
   if (!isBubbleDragPoint(input)) {
     throw new Error(`A drag point is two integers within ${BUBBLE_LIMITS.coordinate} points of the origin.`);
   }
-  return { x: input.x, y: input.y };
+  return { x: input.x, y: input.y, attach: input.attach };
 }
 
 export function parseBubbleCharacter(input: unknown): BubbleCharacterInput {

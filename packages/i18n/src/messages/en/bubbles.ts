@@ -31,6 +31,7 @@ export const messages = defineMessages("bubbles", {
   "bubbles.chatName": "Chat {count}",
   "bubbles.chatRole": "Chat",
   "bubbles.attachHint": "Release to attach to {app}",
+  "bubbles.attachTip": "Drag anywhere. Hold Option (Alt) while dropping to attach to a window.",
   "bubbles.trayQuit": "Quit OpenBot Bubbles",
   "bubbles.popOut": "Pop out to desktop",
   "bubbles.bringBack": "Bring back",

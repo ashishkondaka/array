@@ -29,9 +29,14 @@ describe("bubble payloads from the renderer", () => {
   });
 
   it("accepts integer drag points within the desktop bounds", () => {
-    expect(parseBubbleDragPoint({ x: -1200, y: 40, extra: 1 })).toEqual({ x: -1200, y: 40 });
+    expect(parseBubbleDragPoint({ x: -1200, y: 40, attach: false, extra: 1 })).toEqual({
+      x: -1200,
+      y: 40,
+      attach: false,
+    });
+    expect(() => parseBubbleDragPoint({ x: 1, y: 2 })).toThrow();
     for (const value of [
-      { x: 1.5, y: 0 },
+      { x: 1.5, y: 0, attach: false },
       { x: 0 },
       { x: BUBBLE_LIMITS.coordinate + 1, y: 0 },
       { x: Number.NaN, y: 0 },

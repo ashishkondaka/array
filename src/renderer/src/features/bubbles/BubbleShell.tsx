@@ -25,8 +25,8 @@ import { useBubbles } from "./bubbles-context";
 /** A resting orb hops now and then, at a random moment, so a desktop of orbs never moves in step. */
 const HOP_DELAY_MS = { min: 25_000, max: 55_000 };
 const HOP_MS = 1_000;
-/** As long as main keeps the orb beside the pointer, and a little more. */
-const NUDGE_MS = 3_800;
+/** The flight over, the hover (4.5 s in main) and the flight home. */
+const NUDGE_MS = 5_500;
 
 const ISSUE_TEXT = {
   "permission-screen-recording": "bubbles.issueScreenRecording",
@@ -118,8 +118,8 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
     motionTimer = setTimeout(() => setMotion("rest"), duration);
   };
 
-  // A reply that arrives or an answer the agent needs nudges the user: main moves the orb to the
-  // pointer (once a minute at most) and it wiggles there. Reduced motion keeps it home and still.
+  // A reply that arrives or an answer the agent needs nudges the user: main flies the orb over the top
+  // of the app in front (once a minute at most) and it hovers there. Reduced motion keeps it home.
   let previousStatus: BubbleStatus | null = null;
   createEffect(
     () => ({ next: status(), open: expanded() }),
