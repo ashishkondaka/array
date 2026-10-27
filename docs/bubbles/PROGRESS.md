@@ -261,6 +261,16 @@ expected without notarization. The permission prompts now say Array. Not done: o
 downloaded copy through "Open Anyway" by hand (it needs a person at the dialog). Install steps:
 [INSTALL.md](INSTALL.md).
 
+Liquid Glass rework (user report: the UI looked broken). The first glass layer tinted the whole
+window, and the sidebar's tint sat on the card's tint, so the window read as one washed-out grey
+sheet. Now the chat card is solid and starts at the sidebar's edge, the sidebar floats as an inset
+glass pane over the native blur, and the chrome tint is 28 %. Checked in dark mode on the dev app
+through the Computer Use daemon's screen capture: solid chat, sidebar pane with rim and shadow,
+capsule composer; sidebar resizing leaves no stale pixels. A CSS hot reload left ghosted text in the
+sidebar until the page reloaded (dev only). Not checked: light mode, an inactive window, and whether
+the top row leaves a faint trail while the sidebar animates (one capture showed one; the display
+slept before a second capture).
+
 ## Status against the definition of done
 
 | Item | State |

@@ -191,5 +191,8 @@ A known browser's address bar is read with a small `get_window_state` query, and
 ### Name and glass
 
 The fork is named Array (`fork-identity.ts`, `package.json`, `electron-builder.yml`,
-`bubbles-dev-name.ts` for dev). The transparent window is on by default and `array-glass.css` makes it
-a frosted, mostly opaque Liquid Glass.
+`bubbles-dev-name.ts` for dev). The transparent window is on by default, and `array-glass.css` uses
+Liquid Glass the way Apple does: glass for the navigation layer only. The chat is a solid card; the
+rail and top row are the macOS blur (`under-window` vibrancy) with a thin tint; the sidebar is an
+inset, rounded glass pane over that blur; the composer is a glass slab over the chat. No translucent
+layer sits on another translucent layer.
