@@ -81,6 +81,12 @@ Works:
 - A desktop notification click about a local agent with a bubble shows and expands the bubble
   instead of the main window (`revealBubble`, hook in `renderer-forwarders.ts`).
 
+Checked live: Research (in a bubble) asked an `ask_user` question ("Red or Blue"). The main
+window's sidebar showed "Waiting for your answer"; the bubble showed the question card. Choosing
+Blue in the bubble sent the answer, the agent replied "Blue", and the main window's wait cleared.
+Not run live: an approval card (the seeded agents run with full access, so no approval comes up).
+It uses the same timeline and the same `agent.respondToApproval` path as the question.
+
 Decision: bubbles get all agent events, not only their own agent's. The renderer state
 (runtime snapshots, sidebar-equivalent status) is per host, as in a chat window; a filter would
 need a second event path.
