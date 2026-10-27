@@ -31,6 +31,12 @@ import { runCauseEffect } from "../backend/effect-boundary";
 import { readAppVariant, resolveAppIconPath, resolveLogoColorIconPath } from "./app-icon";
 import { type ApplicationServices, createApplicationServices } from "./application-services";
 import { type BackgroundTray, createBackgroundTray } from "./background-tray";
+import {
+  BUBBLES_APP_ID,
+  BUBBLES_APP_NAME,
+  BUBBLES_PACKAGED_ICON_VARIANT,
+  BUBBLES_USER_DATA_NAME,
+} from "./bubbles/fork-identity"; // bubbles: fork identity
 import { type DeepLink, findDeepLink, parseDeepLink } from "./deep-link-router";
 import { requestNotificationPermission, showRetainedNotification } from "./desktop-notifications";
 import { guardDevelopmentOutput } from "./development-output";
@@ -205,10 +211,12 @@ if (commandLineUserDataDirectory) {
       ),
     ),
   );
+} else {
+  app.setPath("userData", join(app.getPath("appData"), BUBBLES_USER_DATA_NAME)); // bubbles: fork profile
 }
-app.setName("OpenBot");
+app.setName(BUBBLES_APP_NAME); // bubbles: fork name
 app.enableSandbox();
-if (process.platform === "win32") app.setAppUserModelId("app.openbot.desktop");
+if (process.platform === "win32") app.setAppUserModelId(BUBBLES_APP_ID); // bubbles: fork app id
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 // A second launch exits at once and must not write into the files of the instance that runs.
 if (hasSingleInstanceLock) {
@@ -225,7 +233,11 @@ configureLinuxGpu({
   ownsInstance: hasSingleInstanceLock,
   server: hostedServer !== null || serverMode !== null,
 });
-const appVariant = readAppVariant(process.env.OPENBOT_APP_VARIANT, app.isPackaged);
+// bubbles: a packaged fork shows the placeholder icon.
+const appVariant = readAppVariant(
+  process.env.OPENBOT_APP_VARIANT ?? (app.isPackaged ? BUBBLES_PACKAGED_ICON_VARIANT : undefined),
+  app.isPackaged,
+);
 if (!app.isPackaged) guardDevelopmentOutput([process.stdout, process.stderr], () => app.quit());
 const appIconPath = resolveAppIconPath({
   variant: appVariant,

@@ -1,6 +1,6 @@
 {
   "name": "openbot",
-  "productName": "OpenBot",
+  "productName": "OpenBot Bubbles",
   "desktopName": "openbot.desktop",
   "version": "0.51.1",
   "description": "A local-first multi-agent desktop workspace for Codex, Claude, and Grok.",

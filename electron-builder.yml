@@ -1,5 +1,6 @@
-appId: app.openbot.desktop
-productName: OpenBot
+# bubbles: fork identity, see src/main/bubbles/fork-identity.ts
+appId: app.openbot.bubbles
+productName: OpenBot Bubbles
 copyright: Copyright © 2026 Synthetify Labs spółka z ograniczoną odpowiedzialnością
 protocols:
   - name: OpenBot invitations
@@ -97,7 +98,7 @@ mac:
   # macOS 26 makes the dark icon a black tile with black eyes. The catalog also has flat images, and
   # `icon.icns` stays for macOS versions that read only `CFBundleIconFile`. Make the catalog again
   # with `bun scripts/compile-macos-icon.ts` after a change to the `.icon` file.
-  icon: build/icon-production.icns
+  icon: build/bubbles/icon.icns # bubbles: placeholder icon
   extraResources:
     - from: build/macos/Assets.car
       to: Assets.car
@@ -124,7 +125,6 @@ mac:
   entitlementsInherit: build/entitlements.mac.inherit.plist
   darkModeSupport: true
   extendInfo:
-    CFBundleIconName: Icon
     ElectronTeamID: ZTRDTUL87R
     NSMicrophoneUsageDescription: OpenBot uses the microphone to transcribe voice prompts locally on this Mac.
     # Computer Use runs the driver as a child process, so macOS asks for both grants in OpenBot's
@@ -141,7 +141,7 @@ mac:
     - dmg
     - zip
 win:
-  icon: build/icon-production.ico
+  icon: build/icon-preview.ico # bubbles: placeholder icon
   extraResources:
     - from: .openbot-build/voice/runtime
       to: voice/runtime
@@ -163,7 +163,7 @@ nsis:
   allowToChangeInstallationDirectory: true
 linux:
   category: Development
-  icon: build/icon-production.png
+  icon: build/icon-preview.png # bubbles: placeholder icon
   synopsis: A local-first multi-agent desktop workspace.
   extraResources:
     - from: build/linux/openbot.apparmor

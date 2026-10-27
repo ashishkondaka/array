@@ -25,6 +25,7 @@ import { spawnAgentDatabaseHost } from "./agent-database-host-process";
 import { agentDisplayEnvironment, hasSeparateAgentDisplay } from "./agent-display";
 import { type AgentHostSettingsService, createAgentHostSettings } from "./agent-host-settings";
 import { type BrowserProfileService, createBrowserProfileService } from "./browser-profile-service";
+import { BUBBLES_APP_ID, bubblesUpdatesAllowed } from "./bubbles/fork-identity"; // bubbles: fork identity
 import { HostReleaseService, readInstallationMode } from "./host-release-service";
 import {
   CONTAINER_UPDATE_PATHS,
@@ -389,7 +390,7 @@ const HERMES_IMPORT_LINKS_FILE = "openbot-hermes-imports-v1.json";
  * the Electron binary - which is also the name macOS shows in the Privacy & Security panes, and the
  * reason a dev grant does not carry over to a packaged build.
  */
-const PACKAGED_BUNDLE_IDENTIFIER = "app.openbot.desktop";
+const PACKAGED_BUNDLE_IDENTIFIER = BUBBLES_APP_ID; // bubbles: fork app id
 const DEVELOPMENT_BUNDLE_IDENTIFIER = "com.github.Electron";
 
 const TEARDOWN_ORDER = {
@@ -2719,6 +2720,7 @@ export async function createApplicationServices({
       existsSync(HOSTED_UPDATE_TRIGGER));
   const updatesEnabled =
     app.isPackaged &&
+    bubblesUpdatesAllowed(process.env) && // bubbles: never install upstream releases over the fork
     !isNixStoreInstall() &&
     (hostedInstaller || (supportsInstalledUpdates(process.platform) && updateMetadataAvailable)) &&
     isValidSemver(currentVersion);
@@ -2783,8 +2785,9 @@ export async function createApplicationServices({
     platform: process.platform,
     logDirectory: join(app.getPath("userData"), "logs", "update"),
     // Squirrel.Mac only. The path is meaningless under a Linux or Windows home directory.
+    // bubbles: fork app id
     ...(process.platform === "darwin"
-      ? { shipItDirectory: join(homedir(), "Library", "Caches", "app.openbot.desktop.ShipIt") }
+      ? { shipItDirectory: join(homedir(), "Library", "Caches", `${BUBBLES_APP_ID}.ShipIt`) }
       : {}),
     updaterCacheDirectory,
   });
