@@ -290,6 +290,15 @@ while the default was on still said `true`; it was set to `false` by hand. Note 
 edit restarts Electron, and `dev-services` then stops the whole stack ("stopped with code 0"), so
 `bun run dev` has to be started again.
 
+Checked on the dev app after the restart (renderer frames over CDP, light and dark emulated): the
+sidebar pane has its 20 px radius and 6 px inset, the chat card is solid, the composer blurs the
+message under it, and the top row has no ghost. The Settings toggle turns the glass on (transparent
+body, 72 % frame tint) and off again, and the saved preference ends at `false`. The DMG was rebuilt
+from the committed tree: `verify:package` passes with a launch, the ad-hoc signature verifies deep
+and strict, and the packaged main bundle and stylesheet hold `visualEffectState: "active"`, the
+palette rim token and the 72 % opt-in tint. Not checked: the on-screen window itself (the display
+was asleep, so the Computer Use capture had nothing to show), and the first "Open Anyway" by hand.
+
 ## Status against the definition of done
 
 | Item | State |
