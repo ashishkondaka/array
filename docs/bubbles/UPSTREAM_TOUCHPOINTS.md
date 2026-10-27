@@ -97,3 +97,5 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | File | Hook |
 | --- | --- |
 | `src/renderer/src/features/window/window-page-context.tsx` | `conversationCovered` is also true while a bubble is an orb, so a reply nobody saw stays unread |
+| `electron-builder.yml` | the macOS permission prompts (microphone, screen, Automation) say Array |
+| `scripts/verify-macos-package.ts` | expects the Array microphone prompt |

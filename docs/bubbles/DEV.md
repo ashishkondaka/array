@@ -79,6 +79,9 @@ bun run verify:package   # checks the bundle id, the runtimes and the preload
 ```
 
 `package` downloads the voice and remote-desktop runtimes and the pinned Computer Use driver first.
-The app is ad hoc signed, so the first open needs right-click → Open (or
-`xattr -dr com.apple.quarantine dist/mac-arm64/Array.app` for a copy that was downloaded).
-`bun run dist:mac` makes a DMG the same way.
+
+To share the app, `bun run dist:mac` makes `dist/Array-<version>-arm64.dmg` (about 320 MB) and a zip,
+for Apple Silicon only (build on an Intel Mac for an Intel build). The app is ad hoc signed, not
+notarized: give people [INSTALL.md](INSTALL.md), which has the first-open steps for each macOS
+version. Signing and notarization need an Apple Developer ID; until then, leave
+`--config.mac.identity=null` in place.

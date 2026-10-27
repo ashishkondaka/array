@@ -126,11 +126,11 @@ mac:
   darkModeSupport: true
   extendInfo:
     ElectronTeamID: ZTRDTUL87R
-    NSMicrophoneUsageDescription: OpenBot uses the microphone to transcribe voice prompts locally on this Mac.
+    NSMicrophoneUsageDescription: Array uses the microphone to transcribe voice prompts locally on this Mac. # bubbles: fork name in the permission prompts
     # Computer Use runs the driver as a child process, so macOS asks for both grants in OpenBot's
     # name and shows these sentences.
-    NSScreenCaptureUsageDescription: OpenBot captures the screen so an agent can see the app windows you ask it to control.
-    NSAppleEventsUsageDescription: OpenBot sends Automation events so an agent can control the apps you ask it to control.
+    NSScreenCaptureUsageDescription: Array captures the screen so an agent can see the app windows you ask it to control. # bubbles: fork name in the permission prompts
+    NSAppleEventsUsageDescription: Array sends Automation events so an agent can control the apps you ask it to control. # bubbles: fork name in the permission prompts
     NSUserActivityTypes:
       - NSUserActivityTypeBrowsingWeb
   # No `arch` here: a target's own `arch` list replaces the one given on the command line, so

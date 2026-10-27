@@ -252,6 +252,15 @@ updater off). `bun run verify:package` passes after pointing it at the fork's ex
 bundle id `app.array.desktop`, runtimes, ASAR integrity, hardened fuses, and a launch plus
 second-instance check of the packaged app.
 
+Distribution (user request: a Mac app anyone can download): `bun run dist:mac` made
+`Array-0.51.1-arm64.dmg` (322 MB) and a zip. Unsigned (ad hoc), not notarized, Apple Silicon,
+macOS 13 or later. Checked: `verify:package` passes with a launch; a quarantined copy of the DMG
+verifies, mounts, and holds the same app (same code hash); its signature is valid (deep, strict),
+so macOS offers "Open Anyway" and does not call it damaged; Gatekeeper rejects it until then, as
+expected without notarization. The permission prompts now say Array. Not done: opening the
+downloaded copy through "Open Anyway" by hand (it needs a person at the dialog). Install steps:
+[INSTALL.md](INSTALL.md).
+
 ## Status against the definition of done
 
 | Item | State |

@@ -128,7 +128,7 @@ if (!Array.isArray(plist.NSUserActivityTypes) || !plist.NSUserActivityTypes.incl
 if (!plist.ElectronAsarIntegrity) throw new Error("ASAR integrity metadata is missing.");
 expectEqual(
   plist.NSMicrophoneUsageDescription,
-  "OpenBot uses the microphone to transcribe voice prompts locally on this Mac.",
+  "Array uses the microphone to transcribe voice prompts locally on this Mac.", // bubbles: fork name
   "microphone usage description",
 );
 
