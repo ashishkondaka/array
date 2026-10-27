@@ -307,6 +307,19 @@ would make every upstream merge a conflict, so the i18n package swaps the name a
 data such as "OpenBot Local Dev Host" is not renamed), and the literals read `productName()`. The
 sign-in e-mail ("Your OpenBot sign-in code") and the account pages come from OpenBot's account
 service at `openbot.run`; the app cannot rename them, and the account service is out of scope.
+Checked on the dev app: the window title is "Array", the search field says "Search Array", and
+main's provider messages say "Download it in Array"; what still says OpenBot is data (the dev host
+"OpenBot Local Dev Host", seeded channel text). The DMG was rebuilt from the committed tree:
+`verify:package` and the deep, strict signature check pass, and the packaged `index.html` title is
+Array. The main bundle still holds 71 "OpenBot" literals: the catalog messages, swapped at render.
+
+Next (user request): a free bubble asked about something an open app shows ("can you read my
+emails" with Mail open) answered with the embedded browser and a sign-in. Only an attached bubble is
+briefed about a window (`attached-window-context.ts`: pid, window_id, "treat it as the subject");
+a free bubble has the Computer Use tools (every agent, `computerUse !== false`, once the driver's MCP
+server runs) but nothing tells it the desktop exists, so it reaches for the browser. The feature
+is a short desktop block for free bubbles (the windows on screen, from the daemon's desktop state)
+with guidance to look at the matching window and attach itself there, so the orb moves to it.
 
 ## Status against the definition of done
 
