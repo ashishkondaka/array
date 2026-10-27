@@ -81,10 +81,12 @@ export function desktopWorkerBlock(): string {
     `OpenBot tool ${GO_TO_APP_TOOL} with the app's name (for example "Mail"). Your bubble then moves onto the`,
     "app's front window and attaches to it, and the result names the window: read it with the Computer Use",
     "tool get_window_state (pid and window_id from the result) and act there with Computer Use tools",
-    `scoped to it. If ${GO_TO_APP_TOOL} says the app is not running, launch it with the Computer Use tool`,
-    `launch_app (bundle_id from the result) and call ${GO_TO_APP_TOOL} again. When the user's next request`,
-    `is about another app, call ${GO_TO_APP_TOOL} for that one: you move there. Say in a few words where you`,
-    "went. Ask before anything that sends, deletes or pays.",
+    `scoped to it. Opening the app is your job, never the user's: when ${GO_TO_APP_TOOL} says the app is not`,
+    "running, call the Computer Use tool launch_app (bundle_id from the result); when it says the app has",
+    "no window on this screen, call bring_to_front with its pid (that is the click on its Dock icon: it",
+    `brings the app's window to this screen); then call ${GO_TO_APP_TOOL} again. Do not ask the user to open`,
+    `or switch to an app. When the user's next request is about another app, call ${GO_TO_APP_TOOL} for that`,
+    "one: you move there. Say in a few words where you went. Ask before anything that sends, deletes or pays.",
     DESKTOP_BLOCK_END,
   ].join("\n");
 }
@@ -112,12 +114,12 @@ function wordResult(result: GoToAppResult): OpenBotToolResponse {
     case "not-running":
       return openBotToolResult({
         ...result,
-        next: `${result.app} is not running. Launch it with the Computer Use tool launch_app${result.bundleId ? ` (bundle_id ${result.bundleId})` : ` (name ${result.app})`}, wait a moment, then call ${GO_TO_APP_TOOL} again.`,
+        next: `${result.app} is not running. Open it yourself, do not ask the user: call the Computer Use tool launch_app${result.bundleId ? ` with bundle_id ${result.bundleId}` : ` with name ${result.app}`}, wait two seconds, then call ${GO_TO_APP_TOOL} again. If the window is still not on this screen, call bring_to_front with the app's pid first.`,
       });
     case "no-window":
       return openBotToolResult({
         ...result,
-        next: `${result.app} is running but has no window on this screen. Open one (launch_app brings a window up, or use the app's menus), then call ${GO_TO_APP_TOOL} again.`,
+        next: `${result.app} is running (pid ${result.pid}) but has no window on this screen: it is on another Space, hidden or minimised. Bring it here yourself, do not ask the user: call the Computer Use tool bring_to_front with pid ${result.pid} (the click on its Dock icon), wait a second, then call ${GO_TO_APP_TOOL} again. If no window appears, call launch_app${result.bundleId ? ` with bundle_id ${result.bundleId}` : ""} to open one, then ${GO_TO_APP_TOOL} again.`,
       });
     case "unknown-app":
       return openBotToolFailure(

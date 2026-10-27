@@ -35,7 +35,7 @@ export function attachedWindowBlock(surface: AttachedSurface): string {
     `they ask about another app, call the OpenBot tool ${GO_TO_APP_TOOL} with its name and your bubble moves there.`,
     "Work in the background: the user keeps using their screen while you act. Use element actions",
     "(element_token from get_window_state) and type_text with the default background delivery. Do not",
-    "call bring_to_front or launch_app, and use delivery_mode foreground only when a fresh snapshot shows",
+    `call bring_to_front or launch_app for this window (${GO_TO_APP_TOOL} tells you when another app needs them), and use delivery_mode foreground only when a fresh snapshot shows`,
     "that a background attempt did not land; say so when you do.",
     "Place the caret before you type: select or click the exact spot (for the end of a document, the",
     "end of its text area's value), then type, then check the result in a fresh get_window_state.",
