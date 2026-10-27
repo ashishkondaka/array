@@ -271,6 +271,10 @@ sidebar until the page reloaded (dev only). Not checked: light mode, an inactive
 the top row leaves a faint trail while the sidebar animates (one capture showed one; the display
 slept before a second capture).
 
+The DMG was rebuilt with the glass rework: `verify:package` passes (launch included), the ad-hoc
+signature verifies deep and strict, and the packaged stylesheet holds the new `--array-glass-*`
+rules with the reduced-transparency fallback. Still not done by hand: the first "Open Anyway".
+
 ## Status against the definition of done
 
 | Item | State |
