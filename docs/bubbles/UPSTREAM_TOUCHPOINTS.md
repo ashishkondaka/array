@@ -50,3 +50,10 @@ New files: `packages/contracts/src/ipc-bubbles.ts`, `packages/i18n/src/messages/
 | `src/renderer/src/features/provider-updates/provider-runtime-store.ts` | show the update toast from a microtask: upstream created a root inside an effect callback, which halts every update of a window under Solid 2 RC (it froze bubbles and also hit the main window) |
 | `src/renderer/src/preview/mock-openbot.ts` | `bubbles` mock |
 | `src/renderer/src/styles.css` | import `bubbles.css` |
+
+## Phase 2: attention
+
+| File | Hook |
+| --- | --- |
+| `src/main/renderer-forwarders.ts` | a notification click about a local agent with a bubble reveals the bubble |
+| `packages/ui/package.json` | `./features/bubbles/BubbleNotice` export |

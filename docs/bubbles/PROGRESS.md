@@ -64,3 +64,38 @@ Decisions:
 
 Not yet: hiding the main window is covered by design, not by a run (dev automation cannot close a
 window); Windows/Linux not run.
+
+## Phase 2: attention in bubbles (`bubbles/phase-2-attention`)
+
+Works:
+
+- Bubble windows are chat windows, so `forwardAgentEvent` sends them every `agent:event`, as it
+  does to the main window. Approvals, questions (`ask_user`, ui-blocks, MCP elicitation), browser
+  takeover and secure input render with the same timeline cards and answer with the same
+  `agent.respondTo*` IPC. `agent-input-resolved` clears the request in every window.
+- The orb ring pulses (warning colour) while the agent waits; a click expands to the chat, where
+  the pending card is at the end of the timeline.
+- Browser takeover: secure input and Done/Cancel answer in the bubble. The page itself is in the
+  embedded browser, which only the main window shows, so the bubble shows a notice with
+  "Open browser" (opens the main window at the agent).
+- A desktop notification click about a local agent with a bubble shows and expands the bubble
+  instead of the main window (`revealBubble`, hook in `renderer-forwarders.ts`).
+
+Decision: bubbles get all agent events, not only their own agent's. The renderer state
+(runtime snapshots, sidebar-equivalent status) is per host, as in a chat window; a filter would
+need a second event path.
+
+## Design: Liquid Glass (user request)
+
+The user asked for Apple design elements such as Liquid Glass and added
+[`emilkowalski/skills`](https://github.com/emilkowalski/skills) (MIT; installed in
+`~/.claude/skills/`, not in this repository). The bubble styles follow its `apple-design` skill:
+
+- Material: translucent tint, specular top rim, softer lower rim, depth shadow. A page cannot blur
+  the desktop behind a transparent window, and native vibrancy frosts the whole rectangle (a
+  square behind a round orb), so the material is CSS; the tint stays mostly opaque for legibility.
+- The panel header is real glass (`backdrop-filter`); the chat scrolls under it.
+- Status is a glow in the glass edge. Press feedback on pointer-down (scale 0.94).
+- Expand "materializes" from the orb corner (blur + scale + opacity together); the orb grows in.
+- `prefers-reduced-motion` → short fades, no pulse; `prefers-reduced-transparency` → solid, no
+  blur; `prefers-contrast: more` → strong rims. Only palette tokens (`color-mix`), so `check:ui` passes.

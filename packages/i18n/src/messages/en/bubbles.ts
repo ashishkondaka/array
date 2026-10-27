@@ -17,5 +17,7 @@ export const messages = defineMessages("bubbles", {
   "bubbles.statusIdle": "Idle",
   "bubbles.statusWorking": "Working",
   "bubbles.statusAttention": "Needs your answer",
+  "bubbles.takeoverNotice": "{name} needs you in the browser. The browser is in the main window.",
+  "bubbles.openBrowser": "Open browser",
   "bubbles.statusUnread": { one: "{count} unread reply", other: "{count} unread replies" },
 });

@@ -1,9 +1,11 @@
 import type { CentralAuthUser } from "@openbot/contracts/ipc";
 import { computeAgentAvatarMoods } from "@openbot/ui/features/agents/agent-avatar-mood";
+import { BubbleNotice } from "@openbot/ui/features/bubbles/BubbleNotice";
 import { BubbleOrb } from "@openbot/ui/features/bubbles/BubbleOrb";
 import { BubblePanelHeader } from "@openbot/ui/features/bubbles/BubblePanelHeader";
 import type { BubbleStatus } from "@openbot/ui/features/bubbles/bubble-status";
 import { computeSidebarAgentStates } from "@openbot/ui/features/sidebar/sidebar-agent-states";
+import { useText } from "@openbot/ui/text";
 import { createEffect, createMemo, onCleanup, Show } from "solid-js";
 import { usePlatform } from "../../platform";
 import { useTurns } from "../../turns";
@@ -26,6 +28,7 @@ import { useBubbles } from "./bubbles-context";
  */
 export function BubbleShell(props: { account: () => CentralAuthUser; agentId: string }) {
   const bubbles = useBubbles();
+  const { t } = useText();
   const platform = usePlatform();
   const { agentList } = useAgents();
   const { activeTurns, queues, failedTurns, usageLimits, pendingPrompts, pendingApprovals, approvals } = useTurns();
@@ -62,6 +65,12 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
       default:
         return "idle";
     }
+  };
+  // Secure input and Done/Cancel answer in the bubble. The page itself is in the embedded browser,
+  // which only the main window shows, so the bubble sends the user there for it.
+  const takeoverWaiting = () => {
+    const current = sidebarState();
+    return current?.kind === "waiting" && current.reason === "takeover";
   };
   const mood = () =>
     computeAgentAvatarMoods({
@@ -118,6 +127,13 @@ export function BubbleShell(props: { account: () => CentralAuthUser; agentId: st
                   onOpenMain={() => bubbles.focusMain(props.agentId)}
                   onClose={() => bubbles.bringBack(props.agentId)}
                 />
+                <Show when={takeoverWaiting()}>
+                  <BubbleNotice
+                    message={t("bubbles.takeoverNotice", { name: current().name })}
+                    action={t("bubbles.openBrowser")}
+                    onAction={() => bubbles.focusMain(props.agentId)}
+                  />
+                </Show>
                 <div class="bubble-panel-body">
                   <WorkspaceConversation account={props.account} />
                 </div>

@@ -81,7 +81,15 @@ export class BubbleWindowManager {
       defaultValue: EMPTY_BUBBLES,
       decode: decodeBubblesFile,
     });
-    setBubbleWindowSource(() => this.windows());
+    setBubbleWindowSource(
+      () => this.windows(),
+      (agentId) => {
+        if (!this.#find(agentId)) return false;
+        this.setHidden(false);
+        this.setExpanded(agentId, true);
+        return true;
+      },
+    );
   }
 
   /** Reads the saved bubbles and opens each one whose agent still exists. */

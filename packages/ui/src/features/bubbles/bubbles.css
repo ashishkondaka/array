@@ -1,5 +1,10 @@
-/* Floating agent bubbles (OpenBot Bubbles fork). The window is transparent: only the orb, the
- * chip and the panel card paint. */
+/* Floating agent bubbles (OpenBot Bubbles fork), in a Liquid Glass style.
+ *
+ * The window is transparent: only the orb, the chip and the panel card paint. A web page cannot
+ * blur the desktop behind its window, and native vibrancy frosts the whole rectangle (a square
+ * behind a round orb), so the material is built here: a translucent tint, a specular rim where
+ * light catches the top edge, a softer rim below, and depth from a shadow. Inside the panel the
+ * header is real glass: the conversation scrolls under it and `backdrop-filter` blurs it. */
 
 html[data-bubble-window],
 html[data-bubble-window] body {
@@ -9,6 +14,16 @@ html[data-bubble-window] body {
 .bubble-window {
   --bubble-orb-size: calc(var(--openbot-control-xl) + var(--openbot-space-4));
   --bubble-ring-width: var(--openbot-space-0-5);
+  --bubble-header-height: calc(var(--openbot-control-lg) + var(--openbot-space-3));
+  --bubble-glass-blur: var(--openbot-space-6);
+  /* The tint is mostly opaque: the desktop under it is not blurred, and text must stay legible. */
+  --bubble-glass-tint: color-mix(in oklab, var(--openbot-bg-surface-raised) 82%, transparent);
+  --bubble-glass-panel: color-mix(in oklab, var(--openbot-bg-canvas) 94%, transparent);
+  --bubble-glass-header: color-mix(in oklab, var(--openbot-bg-canvas) 58%, transparent);
+  --bubble-glass-rim: color-mix(in oklab, var(--openbot-text-primary) 30%, transparent);
+  --bubble-glass-rim-soft: color-mix(in oklab, var(--openbot-text-primary) 9%, transparent);
+  --bubble-glass-sheen: color-mix(in oklab, var(--openbot-text-primary) 16%, transparent);
+  --bubble-glass-depth: var(--openbot-shadow-popover-ambient);
   position: fixed;
   inset: 0;
   display: flex;
@@ -17,11 +32,15 @@ html[data-bubble-window] body {
   font-family: var(--openbot-font-sans);
 }
 
+/* ── Orb ─────────────────────────────────────────────────────────────────── */
+
 .bubble-orb-frame {
   display: flex;
   align-items: center;
   gap: var(--openbot-space-2);
   padding: var(--openbot-space-1);
+  /* It appears from nothing, so it grows in place rather than sliding from anywhere. */
+  animation: bubble-orb-in var(--openbot-duration-normal) var(--openbot-ease-out) both;
 }
 
 .bubble-orb.ui-button {
@@ -33,14 +52,22 @@ html[data-bubble-window] body {
   place-items: center;
   padding: 0;
   border-radius: var(--openbot-radius-pill);
-  background: var(--openbot-bg-surface-raised);
-  box-shadow: var(--openbot-shadow-raised);
+  background:
+    radial-gradient(120% 90% at 30% 12%, var(--bubble-glass-sheen), transparent 58%), var(--bubble-glass-tint);
+  box-shadow:
+    inset 0 1px 0 var(--bubble-glass-rim),
+    inset 0 -1px 0 var(--bubble-glass-rim-soft),
+    inset 0 0 0 1px var(--bubble-glass-rim-soft),
+    0 var(--openbot-space-1-5) var(--openbot-space-4) var(--bubble-glass-depth);
   cursor: grab;
   touch-action: none;
+  /* Feedback on press, not on release: the orb gives a little under the pointer at once. */
+  transition: transform var(--openbot-duration-fast) var(--openbot-ease-out);
 }
 
 .bubble-orb.ui-button:active {
   cursor: grabbing;
+  transform: scale(0.94);
 }
 
 .bubble-orb-avatar {
@@ -49,20 +76,25 @@ html[data-bubble-window] body {
   pointer-events: none;
 }
 
+/* The status is a glow in the glass edge, not a painted border. */
 .bubble-orb-ring {
   position: absolute;
   inset: 0;
-  border: var(--bubble-ring-width) solid var(--openbot-border);
+  border: var(--bubble-ring-width) solid transparent;
   border-radius: var(--openbot-radius-pill);
   pointer-events: none;
+  transition:
+    border-color var(--openbot-duration-normal) var(--openbot-ease-out),
+    box-shadow var(--openbot-duration-normal) var(--openbot-ease-out);
 }
 
 .bubble-orb[data-status="working"] .bubble-orb-ring {
-  border-color: var(--openbot-accent);
+  border-color: color-mix(in oklab, var(--openbot-accent) 80%, transparent);
+  box-shadow: 0 0 var(--openbot-space-2) color-mix(in oklab, var(--openbot-accent) 45%, transparent);
 }
 
 .bubble-orb[data-status="unread"] .bubble-orb-ring {
-  border-color: var(--openbot-badge-new);
+  border-color: color-mix(in oklab, var(--openbot-badge-new) 80%, transparent);
 }
 
 .bubble-orb[data-status="attention"] .bubble-orb-ring {
@@ -70,7 +102,7 @@ html[data-bubble-window] body {
   animation: bubble-orb-pulse var(--openbot-duration-slow) var(--openbot-ease-in-out) infinite alternate;
 }
 
-/* One running animation per attention orb only: an idle orb paints nothing, so it costs no frames. */
+/* Only an orb that needs an answer runs an animation; an idle orb paints nothing, so it costs no frames. */
 @keyframes bubble-orb-pulse {
   from {
     box-shadow: 0 0 0 0 var(--openbot-warning-soft);
@@ -81,10 +113,10 @@ html[data-bubble-window] body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bubble-orb[data-status="attention"] .bubble-orb-ring {
-    animation: none;
-    box-shadow: 0 0 0 var(--openbot-space-1) var(--openbot-warning-soft);
+@keyframes bubble-orb-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
   }
 }
 
@@ -99,10 +131,14 @@ html[data-bubble-window] body {
   padding: 0 var(--openbot-space-1);
   border-radius: var(--openbot-radius-pill);
   background: var(--openbot-badge-new);
+  box-shadow: inset 0 1px 0 var(--bubble-glass-rim);
   color: var(--openbot-text-on-status);
   font-size: var(--openbot-text-sm);
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--openbot-weight-semibold);
 }
+
+/* ── Attachment chip ─────────────────────────────────────────────────────── */
 
 .bubble-orb-chip,
 .bubble-panel-attached {
@@ -117,8 +153,15 @@ html[data-bubble-window] body {
 .bubble-orb-chip {
   padding: var(--openbot-space-1) var(--openbot-space-2);
   border-radius: var(--openbot-radius-pill);
-  background: var(--openbot-bg-surface-raised);
-  box-shadow: var(--openbot-shadow-raised);
+  background: var(--bubble-glass-tint);
+  box-shadow:
+    inset 0 1px 0 var(--bubble-glass-rim),
+    inset 0 0 0 1px var(--bubble-glass-rim-soft),
+    0 var(--openbot-space-1) var(--openbot-space-3) var(--bubble-glass-depth);
+  /* Text over a translucent surface: a little heavier and more open than on a solid one. */
+  color: var(--openbot-text-primary);
+  font-weight: var(--openbot-weight-medium);
+  letter-spacing: 0.01em;
 }
 
 .bubble-orb-chip svg,
@@ -134,25 +177,51 @@ html[data-bubble-window] body {
   white-space: nowrap;
 }
 
+/* ── Expanded panel ──────────────────────────────────────────────────────── */
+
 .bubble-panel {
+  position: relative;
   display: flex;
   width: 100%;
   height: 100%;
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--openbot-border);
   border-radius: var(--openbot-radius-xl);
-  background: var(--openbot-bg-canvas);
+  background: var(--bubble-glass-panel);
+  box-shadow:
+    inset 0 1px 0 var(--bubble-glass-rim),
+    inset 0 0 0 1px var(--bubble-glass-rim-soft);
+  /* It grows out of the orb's corner, the way it will fold back into it, and arrives as a
+   * material: blur and scale settle together. */
+  transform-origin: top left;
+  animation: bubble-materialize var(--openbot-duration-normal) var(--openbot-ease-out) both;
 }
 
+@keyframes bubble-materialize {
+  from {
+    filter: blur(var(--openbot-space-1));
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* The header floats over the chat as glass; the chat scrolls under it. */
 .bubble-panel-header {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  left: 0;
   display: flex;
+  height: var(--bubble-header-height);
   align-items: center;
   gap: var(--openbot-space-2);
-  padding: var(--openbot-space-2) var(--openbot-space-2) var(--openbot-space-2) var(--openbot-space-3);
-  border-bottom: 1px solid var(--openbot-border);
+  padding: 0 var(--openbot-space-2) 0 var(--openbot-space-3);
+  background: var(--bubble-glass-header);
+  box-shadow: 0 1px 0 var(--bubble-glass-rim-soft);
   -webkit-app-region: drag;
+  backdrop-filter: blur(var(--bubble-glass-blur)) saturate(180%);
 }
 
 .bubble-panel-avatar {
@@ -171,7 +240,8 @@ html[data-bubble-window] body {
 .bubble-panel-name {
   overflow: hidden;
   font-size: var(--openbot-text-sm);
-  font-weight: 600;
+  font-weight: var(--openbot-weight-semibold);
+  letter-spacing: 0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -190,18 +260,95 @@ html[data-bubble-window] body {
   flex-direction: column;
 }
 
+/* The main window's grid gives the conversation its height; in a bubble the panel body does. The
+ * panel shows through it, and its first message starts below the floating header. */
+.bubble-panel-body > .conversation-panel {
+  min-height: 0;
+  flex: 1;
+  background: transparent;
+}
+
+.bubble-panel-body .conversation-scroll {
+  padding-top: var(--bubble-header-height);
+  scroll-padding-top: var(--bubble-header-height);
+}
+
 /* The bubble header names the agent and moves the window, so the chat's own header stays hidden. */
 .bubble-panel-body .conversation-header {
   display: none;
 }
 
-/* The main window's grid gives the conversation its height; in a bubble the panel body does. */
-.bubble-panel-body > .conversation-panel {
-  min-height: 0;
+.bubble-notice {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--openbot-space-2);
+  margin: calc(var(--bubble-header-height) + var(--openbot-space-2)) var(--openbot-space-2) 0;
+  padding: var(--openbot-space-2) var(--openbot-space-3);
+  border-radius: var(--openbot-radius-lg);
+  background: var(--openbot-warning-soft);
+  box-shadow: inset 0 1px 0 var(--bubble-glass-rim-soft);
+  color: var(--openbot-warning-text);
+  font-size: var(--openbot-text-sm);
+  font-weight: var(--openbot-weight-medium);
+}
+
+/* With a notice, it holds the header's space, so the chat starts under the notice. */
+.bubble-notice + .bubble-panel-body .conversation-scroll {
+  padding-top: 0;
+}
+
+.bubble-notice-text {
+  min-width: 0;
   flex: 1;
 }
 
 /* A collapsed orb has no room for a notification; the main window shows it. */
 html[data-bubble-window="collapsed"] [data-sonner-toaster] {
   display: none;
+}
+
+/* ── Accessibility ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble-orb-frame,
+  .bubble-panel {
+    animation: bubble-fade var(--openbot-duration-fast) linear both;
+  }
+
+  .bubble-orb.ui-button:active {
+    transform: none;
+  }
+
+  .bubble-orb[data-status="attention"] .bubble-orb-ring {
+    animation: none;
+    box-shadow: 0 0 0 var(--openbot-space-1) var(--openbot-warning-soft);
+  }
+}
+
+@keyframes bubble-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Frosted becomes solid: no translucency, no blur. */
+@media (prefers-reduced-transparency: reduce) {
+  .bubble-window {
+    --bubble-glass-tint: var(--openbot-bg-surface-raised);
+    --bubble-glass-panel: var(--openbot-bg-canvas);
+    --bubble-glass-header: var(--openbot-bg-canvas);
+  }
+
+  .bubble-panel-header {
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .bubble-window {
+    --bubble-glass-rim: var(--openbot-border-strong);
+    --bubble-glass-rim-soft: var(--openbot-border-strong);
+  }
 }

@@ -382,6 +382,7 @@
     "./features/conversation/BrowserPreviewSidebar": "./src/features/conversation/BrowserPreviewSidebar.tsx",
     "./styles/sliding-tabs.css": "./src/styles/sliding-tabs.css",
     "./styles/action-menu.css": "./src/styles/action-menu.css",
+    "./features/bubbles/BubbleNotice": "./src/features/bubbles/BubbleNotice.tsx",
     "./features/bubbles/BubbleOrb": "./src/features/bubbles/BubbleOrb.tsx",
     "./features/bubbles/BubblePanelHeader": "./src/features/bubbles/BubblePanelHeader.tsx",
     "./features/bubbles/bubble-status": "./src/features/bubbles/bubble-status.ts",

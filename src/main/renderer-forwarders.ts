@@ -51,6 +51,7 @@ import type { AgentService } from "../backend/agent-service";
 import { runCauseEffect } from "../backend/effect-boundary";
 import type { WorkflowNotice } from "../backend/workflows/workflows";
 import type { HostAnalytics } from "./analytics";
+import { revealBubble } from "./bubbles/bubble-window-registry"; // bubbles: notification clicks
 import {
   closeRetainedNotification,
   desktopShowsAgentEvent,
@@ -364,6 +365,8 @@ export function createRendererForwarders({
       notification.on("failed", release);
     }
     notification.on("click", () => {
+      // bubbles: a local agent with a bubble answers there, even while the main window is hidden.
+      if (serverId === LOCAL_SERVER_ID && !content.channelId && revealBubble(content.agentId)) return;
       // Re-read the window because it can change after the notification is shown.
       const current = getMainWindow();
       if (!current || current.isDestroyed()) return;
