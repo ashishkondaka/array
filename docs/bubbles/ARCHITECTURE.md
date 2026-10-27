@@ -213,7 +213,11 @@ custom endpoint `apple-intelligence` (the same path a user takes for a local Oll
 `apple-intelligence/apple-foundation` as a model that cannot think, and seeds an "Apple Analyst"
 agent once OpenCode lists the model. The server exits when the app closes its stdin. On a Mac
 without the model (older macOS, Apple Intelligence off, Intel) the server says so and nothing is
-saved. Limits: about a 4 k-token context, text only, no tool calls.
+saved. Limits: a 4 k-token context (8 k on some Macs), text only, no tool calls. OpenBot's developer
+instructions alone are ~15 k tokens, so the server budgets each part: the instructions keep their
+first 9 000 characters (the agent's identity and rules), the conversation its last 7 000, and the
+cut is marked in the text. Apple's guardrails can refuse a prompt ("May contain unsafe content");
+the refusal is returned as the model's error.
 
 ### Characters, chats, local analyst
 

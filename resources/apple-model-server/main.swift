@@ -92,11 +92,28 @@ struct ChatRequest: Decodable {
   let max_completion_tokens: Int?
 }
 
+/// The model's window is small (4 096 tokens on most Macs, 8 192 on some), and the client's
+/// instructions alone can be several times that: OpenBot's developer instructions run to tens of
+/// thousands of characters. So each part gets a budget, in characters (about four per token): the
+/// instructions keep their head, where the agent's identity and rules are; the conversation keeps
+/// its tail, where the question is. The cut is said, so the model does not read a sentence as whole.
+let instructionBudget = 9_000
+let conversationBudget = 7_000
+let omitted = "\n[… earlier text omitted to fit this Mac's on-device model …]\n"
+
+func head(_ text: String, _ budget: Int) -> String {
+  text.count <= budget ? text : String(text.prefix(budget)) + omitted
+}
+
+func tail(_ text: String, _ budget: Int) -> String {
+  text.count <= budget ? text : omitted + String(text.suffix(budget))
+}
+
 /// System messages become the session's instructions; the rest becomes one prompt that carries the
 /// conversation, since each request is complete in itself (the adapter sends the whole history).
 func sessionAndPrompt(for request: ChatRequest) -> (LanguageModelSession, String) {
-  let instructions = request.messages.filter { $0.role == "system" || $0.role == "developer" }
-    .compactMap { $0.content?.text }.joined(separator: "\n\n")
+  let instructions = head(request.messages.filter { $0.role == "system" || $0.role == "developer" }
+    .compactMap { $0.content?.text }.joined(separator: "\n\n"), instructionBudget)
   let turns = request.messages.filter { $0.role != "system" && $0.role != "developer" }
   var prompt = ""
   if turns.count > 1 {
@@ -108,6 +125,7 @@ func sessionAndPrompt(for request: ChatRequest) -> (LanguageModelSession, String
   } else {
     prompt = turns.last?.content?.text ?? ""
   }
+  prompt = tail(prompt, conversationBudget)
   let session = instructions.isEmpty ? LanguageModelSession() : LanguageModelSession(instructions: instructions)
   return (session, prompt)
 }

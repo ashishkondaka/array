@@ -21,9 +21,9 @@ if (process.platform !== "darwin") {
   logger.info("Not macOS: the Apple model server is not built.");
 } else {
   try {
-    const swiftc = execFileSync("xcrun", ["--find", "swiftc"], { encoding: "utf8" }).trim();
     mkdirSync(dirname(output), { recursive: true });
-    execFileSync(swiftc, ["-O", "-target", `${architecture}-apple-macos26.0`, "-o", output, source], {
+    // Through `xcrun`, which sets the SDK: `swiftc` called by its path cannot load the standard library.
+    execFileSync("xcrun", ["swiftc", "-O", "-target", `${architecture}-apple-macos26.0`, "-o", output, source], {
       stdio: "inherit",
     });
     logger.info(`Built ${output}`);
