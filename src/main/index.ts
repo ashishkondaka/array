@@ -7,7 +7,7 @@ import {
   type HostStatus,
   IPC_ENDPOINTS,
 } from "@openbot/contracts/ipc";
-import { createFormat, resolveLocale, translateFor } from "@openbot/i18n";
+import { createFormat, resolveLocale, setProductName, translateFor } from "@openbot/i18n";
 import { localizeSourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger, toLogValue } from "@openbot/logging";
 import { createRemoteDirectoryRefresh } from "@openbot/team-client/remote-directory";
@@ -223,6 +223,7 @@ if (commandLineUserDataDirectory) {
   app.setPath("userData", join(app.getPath("appData"), BUBBLES_USER_DATA_NAME)); // bubbles: fork profile
 }
 app.setName(BUBBLES_APP_NAME); // bubbles: fork name
+setProductName(BUBBLES_APP_NAME); // bubbles: fork name in main's strings (tray, dialogs, notifications)
 app.enableSandbox();
 if (process.platform === "win32") app.setAppUserModelId(BUBBLES_APP_ID); // bubbles: fork app id
 const hasSingleInstanceLock = app.requestSingleInstanceLock();

@@ -1,5 +1,6 @@
 import { AppLogo } from "@openbot/brand";
 import { AGENT_TEMPLATE_CARD, type AgentTemplatePreview } from "@openbot/contracts/ipc";
+import { productName } from "@openbot/i18n";
 import { avatarHeadColor, createStaticAvatarSvg } from "@openbot/ui/bloub-avatar";
 import { render } from "@solidjs/web";
 import { flush } from "solid-js";
@@ -128,7 +129,7 @@ async function drawColumn(
   await drawLogo(context, x, 92, 44, colors);
   context.fillStyle = colors.primary;
   context.font = `600 28px ${FONT}`;
-  context.fillText("OpenBot", x + 58, 124);
+  context.fillText(productName(), x + 58, 124);
 
   // `y` is always the baseline of the last line drawn.
   let y = 154;

@@ -299,6 +299,15 @@ and strict, and the packaged main bundle and stylesheet hold `visualEffectState:
 palette rim token and the 72 % opt-in tint. Not checked: the on-screen window itself (the display
 was asleep, so the Computer Use capture had nothing to show), and the first "Open Anyway" by hand.
 
+In-app name (user report: the first-run screen of the packaged app said OpenBot). The bundle, Dock,
+menus and prompts said Array; the UI did not: upstream's catalogs name the product in 861 English
+messages (9,770 across the locales) and six components held the literal. Rewriting the catalogs
+would make every upstream merge a conflict, so the i18n package swaps the name at render time
+(`setProductName`, `brandText` in `createTranslate`, applied to the message before interpolation so
+data such as "OpenBot Local Dev Host" is not renamed), and the literals read `productName()`. The
+sign-in e-mail ("Your OpenBot sign-in code") and the account pages come from OpenBot's account
+service at `openbot.run`; the app cannot rename them, and the account service is out of scope.
+
 ## Status against the definition of done
 
 | Item | State |

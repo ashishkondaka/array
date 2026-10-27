@@ -1,10 +1,9 @@
 import { AppLogo } from "@openbot/brand";
+import { productName } from "@openbot/i18n";
 import { Button, ErrorReference } from "@openbot/ui";
 import { useText } from "@openbot/ui/text";
 import { usePlatform } from "../../platform";
 import { useSetup } from "./onboarding-context";
-
-const PRODUCT_NAME = "OpenBot";
 
 /**
  * Shown in place of first-run setup when the saved setup could not be read. A configured user
@@ -25,7 +24,7 @@ export function SetupReadError() {
             interactive
             class="account-login-logo"
           />
-          <span class="account-login-wordmark">{PRODUCT_NAME}</span>
+          <span class="account-login-wordmark">{productName()}</span>
         </header>
         <section
           class="account-login"

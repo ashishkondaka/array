@@ -1,4 +1,5 @@
 import { pluralCategory } from "./plural";
+import { brandText } from "./product-name"; // bubbles: the fork's product name
 
 /**
  * The message format the whole app translates through: plain strings with `{name}` placeholders,
@@ -122,7 +123,8 @@ export function createTranslate<Source extends MessageCatalog>(input: {
     const message = translated ?? input.source[key];
     if (message === undefined) return key;
     const locale = translated === undefined ? input.sourceLocale : input.locale;
-    const text = typeof message === "string" ? message : selectForm(message, countOf(values), locale);
+    // bubbles: the fork's product name, swapped into the message before the values go in.
+    const text = brandText(typeof message === "string" ? message : selectForm(message, countOf(values), locale));
     return values ? interpolate(text, values) : text;
   };
 }

@@ -1,5 +1,5 @@
 import { type ComputerUsePermissionApp, LOCAL_SERVER_ID, type MacPermissionId } from "@openbot/contracts/ipc";
-import type { AppTextKey } from "@openbot/i18n";
+import { type AppTextKey, productName } from "@openbot/i18n";
 import { Button, FolderOpen, GripVertical, Monitor, MousePointer2 } from "@openbot/ui";
 import { useText } from "@openbot/ui/text";
 import { createSignal, onCleanup, onSettled, Show } from "solid-js";
@@ -27,9 +27,9 @@ const PERMISSION_HELP: Record<MacPermissionId, { title: AppTextKey; pane: AppTex
   },
 };
 
-/** The names of the applications this window can point at. They are product names. */
+/** The name of the streaming helper this window can point at. It is a product name; the app's own
+ * name comes from `productName()`. */
 const SUNSHINE_APP_NAME = "Sunshine";
-const OPENBOT_APP_NAME = "OpenBot";
 
 /** How often the driver is asked again while the user is in System Settings. */
 const POLL_INTERVAL_MS = 1_000;
@@ -174,7 +174,7 @@ export function ComputerUsePermissionHelp(props: { permission: MacPermissionId; 
           <Show
             when={app()}
             fallback={t("computerUse.help.findInList", {
-              name: props.sunshine ? SUNSHINE_APP_NAME : OPENBOT_APP_NAME,
+              name: props.sunshine ? SUNSHINE_APP_NAME : productName(),
             })}
           >
             {(bundle) => t("computerUse.help.dragIntoList", { name: bundle().name })}

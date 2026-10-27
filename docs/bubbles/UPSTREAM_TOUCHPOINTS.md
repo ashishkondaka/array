@@ -102,3 +102,10 @@ New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts
 | `packages/contracts/src/app-appearance.ts` | `DEFAULT_TRANSPARENT_WINDOW = false`: the window is opaque, the page draws the glass |
 | `src/main/main-window.ts` | the two chat windows pass `visualEffectState: "active"`, so the opt-in glass window keeps its blur while inactive |
 | `src/main/window-appearance.ts` | comment only: why the blur stays live |
+| `packages/contracts/package.json`, `packages/contracts/src/fork-identity.ts` | `BUBBLES_PRODUCT_NAME`, the name every process shows (new file, one export entry) |
+| `packages/i18n/src/product-name.ts`, `packages/i18n/src/message.ts`, `packages/i18n/src/index.ts` | `createTranslate` swaps "OpenBot" for the product name an app set with `setProductName`; the catalogs are untouched, and an app that sets none (mobile) reads them as written |
+| `src/main/index.ts` | `setProductName(BUBBLES_APP_NAME)` next to `app.setName` |
+| `src/renderer/src/index.tsx`, `src/renderer/src/helper.tsx` | `setProductName(BUBBLES_PRODUCT_NAME)` before the first render |
+| `packages/ui/src/features/account/LanguageWheel.tsx`, `AccountLogin.tsx`, `src/renderer/src/features/onboarding/SetupReadError.tsx` | the wordmark reads `productName()` instead of a literal |
+| `src/renderer/src/platform.tsx`, `features/computer-use/ComputerUsePermissionHelp.tsx`, `features/agent-templates/agent-template-card.tsx` | the app-info fallback, the permission card and the template card read `productName()` |
+| `src/renderer/index.html`, `helper.html`, `browser-pip.html`, `team-webrtc.html` | the static `<title>` (the window title before a page sets its own, and the accessibility name of the window) says Array |

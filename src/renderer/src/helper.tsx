@@ -1,3 +1,5 @@
+import { BUBBLES_PRODUCT_NAME } from "@openbot/contracts/fork-identity"; // bubbles: fork name
+import { setProductName } from "@openbot/i18n";
 import { installPointerFocusGuard } from "@openbot/ui/pointer-focus";
 import { render } from "@solidjs/web";
 import { syncAppearance } from "./appearance-choice";
@@ -18,6 +20,7 @@ if (!root) {
   throw new Error("Renderer root element was not found.");
 }
 
+setProductName(BUBBLES_PRODUCT_NAME); // bubbles: the strings say Array
 installPointerFocusGuard();
 
 const query = new URLSearchParams(window.location.search);

@@ -17,6 +17,7 @@ export {
   type Translate,
 } from "./message";
 export type { AppMessages } from "./messages/en/index";
+export { productName, setProductName } from "./product-name"; // bubbles: the fork's product name
 export { localizeSourceText, matchingSourceKeys, type SourceMessages, sourceText } from "./source-text";
 export { en };
 

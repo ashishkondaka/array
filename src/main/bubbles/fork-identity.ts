@@ -2,7 +2,10 @@
 // `userData` directory or the single-instance lock of an installed OpenBot, so both can run at once.
 // `electron-builder.yml` and `package.json` repeat these values for the build.
 
-export const BUBBLES_APP_NAME = "Array";
+import { BUBBLES_PRODUCT_NAME } from "@openbot/contracts/fork-identity";
+
+/** The name, shared with the renderer through `@openbot/contracts/fork-identity`. */
+export const BUBBLES_APP_NAME = BUBBLES_PRODUCT_NAME;
 export const BUBBLES_APP_ID = "app.array.desktop";
 export const BUBBLES_USER_DATA_NAME = "Array";
 // The preview icon stands in for a fork icon until one is drawn.

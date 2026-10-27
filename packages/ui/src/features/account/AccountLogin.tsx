@@ -2,6 +2,7 @@ import { AppLogo } from "@openbot/brand";
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import type { AppVariant, CentralAuthIssue, CentralAuthState } from "@openbot/contracts/ipc";
 import { normalizeEmailAddress, normalizeOneTimeCode } from "@openbot/contracts/validation";
+import { productName } from "@openbot/i18n";
 import { ArrowLeft, Button, ErrorReference, Input, Lock, RefreshCw } from "@openbot/ui";
 import { errorReference, type UserErrorDetails } from "@openbot/user-errors";
 import { createEffect, createMemo, createSignal, onCleanup, Show, untrack } from "solid-js";
@@ -34,7 +35,6 @@ const UNCERTAIN_EMAIL_DELIVERY_ISSUES = new Set([
   "email_delivery_unknown",
 ]);
 
-const PRODUCT_NAME = "OpenBot";
 const EMAIL_PLACEHOLDER = "you@example.com";
 const EMAIL_MARKER = "\u0000";
 
@@ -360,7 +360,7 @@ export function AccountLogin(props: AccountLoginProps) {
       <div class="account-login-shell">
         <header class="account-login-brand-lockup">
           <AppLogo variant={props.variant} animation="blink" interactive class="account-login-logo" />
-          <span class="account-login-wordmark">{PRODUCT_NAME}</span>
+          <span class="account-login-wordmark">{productName()}</span>
         </header>
 
         <section

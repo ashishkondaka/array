@@ -191,7 +191,15 @@ A known browser's address bar is read with a small `get_window_state` query, and
 ### Name and glass
 
 The fork is named Array (`fork-identity.ts`, `package.json`, `electron-builder.yml`,
-`bubbles-dev-name.ts` for dev). The window is opaque and `array-glass.css` draws the glass itself.
+`bubbles-dev-name.ts` for dev). Inside the app the name comes from one place:
+`@openbot/contracts/fork-identity` holds `BUBBLES_PRODUCT_NAME`, main and both renderer entries pass
+it to the i18n package's `setProductName`, and `createTranslate` swaps "OpenBot" for it in every
+message it renders, before the values go in, so a server or team named "OpenBot …" keeps its name.
+The catalogs stay upstream's, and the mobile app, which sets no name, reads them as written. The
+wordmark on the first-run and sign-in screens, the Computer Use permission card and the template
+card read `productName()`. What the app cannot rename: the sign-in e-mail and the account pages,
+which OpenBot's account service at `openbot.run` sends and serves (see INSTALL.md). The window is
+opaque and `array-glass.css` draws the glass itself.
 Electron cannot use macOS's Liquid Glass (`NSGlassEffectView`); its only material is the older
 `vibrancy` blur, and that needs a transparent window, which has two faults: the compositor leaves
 stale pixels wherever the window is translucent (ghost text after a resize or a title change), and

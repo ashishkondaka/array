@@ -1,3 +1,5 @@
+import { BUBBLES_PRODUCT_NAME } from "@openbot/contracts/fork-identity"; // bubbles: fork name
+import { setProductName } from "@openbot/i18n";
 import { installPointerFocusGuard } from "@openbot/ui/pointer-focus";
 import { render } from "@solidjs/web";
 import { readBubbleWindowTarget } from "./features/bubbles/bubble-window"; // bubbles: window mode
@@ -18,6 +20,7 @@ if (!root) {
 
 // A startup mark for `dev:bench`, after the bundle is parsed.
 performance.mark("openbot:renderer-start");
+setProductName(BUBBLES_PRODUCT_NAME); // bubbles: the strings say Array
 installPointerFocusGuard();
 syncAppearance({ windowGlass: true });
 syncLogoColor();
