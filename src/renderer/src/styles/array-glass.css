@@ -1,0 +1,67 @@
+/* Array (OpenBot Bubbles fork): Liquid Glass over the macOS window blur.
+ *
+ * Upstream's transparent window (`window-glass.css`) clears the frame and tints the content card.
+ * This layer makes that glass frosted and mostly opaque, so text reads as easily as on a solid
+ * window, and gives the floating surfaces (composer, menus, dialogs) the same material as the
+ * bubbles: a translucent tint, a bright rim where light catches the top edge, and depth. Only
+ * palette tokens are used, so light and dark follow the theme. Reduced transparency turns it off. */
+
+:root[data-openbot-window-glass] {
+  --window-glass-frame: color-mix(in oklab, var(--openbot-bg-frame) 42%, transparent);
+  --window-glass-card: color-mix(in oklab, var(--openbot-bg-canvas) 78%, transparent);
+  --array-glass-surface: color-mix(in oklab, var(--openbot-bg-surface) 80%, transparent);
+  --array-glass-rim: color-mix(in oklab, var(--openbot-text-primary) 22%, transparent);
+  --array-glass-rim-soft: color-mix(in oklab, var(--openbot-text-primary) 8%, transparent);
+  --array-glass-blur: var(--openbot-space-6);
+}
+
+/* The composer floats over the chat as a glass slab. */
+:root[data-openbot-window-glass] .composer {
+  border-color: var(--array-glass-rim-soft);
+  background: var(--array-glass-surface);
+  box-shadow:
+    inset 0 1px 0 var(--array-glass-rim),
+    0 var(--openbot-space-2) var(--openbot-space-6) var(--openbot-shadow-popover-ambient);
+  backdrop-filter: blur(var(--array-glass-blur)) saturate(180%);
+}
+
+/* Menus and dialogs: a thicker glass, so a bigger surface reads as heavier. */
+:root[data-openbot-window-glass] .ui-action-menu,
+:root[data-openbot-window-glass] .ui-dialog-content:not([data-dialog-surface="unstyled"]) {
+  background: color-mix(in oklab, var(--openbot-bg-sheet) 84%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--array-glass-rim),
+    0 0 0 1px var(--array-glass-rim-soft),
+    0 var(--openbot-space-3) var(--openbot-space-8) var(--openbot-shadow-menu);
+  backdrop-filter: blur(calc(var(--array-glass-blur) * 1.5)) saturate(180%);
+}
+
+/* The sidebar is a slightly heavier glass than the card: structure reads darker than content. */
+:root[data-openbot-window-glass] .app-window .sidebar {
+  background: color-mix(in oklab, var(--openbot-bg-sidebar) 72%, transparent);
+  box-shadow: inset -1px 0 0 var(--array-glass-rim-soft);
+}
+
+/* The search field sits in the sidebar glass as a recessed well. */
+:root[data-openbot-window-glass] .sidebar-search-wrap {
+  border-radius: var(--openbot-radius-md);
+  box-shadow: inset 0 1px 0 var(--array-glass-rim-soft);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-openbot-window-glass] {
+    --window-glass-frame: var(--openbot-bg-frame);
+    --window-glass-card: var(--openbot-bg-canvas);
+    --array-glass-surface: var(--openbot-bg-surface);
+  }
+
+  :root[data-openbot-window-glass] .app-window .sidebar {
+    background: var(--openbot-bg-sidebar);
+  }
+
+  :root[data-openbot-window-glass] .composer,
+  :root[data-openbot-window-glass] .ui-action-menu,
+  :root[data-openbot-window-glass] .ui-dialog-content {
+    backdrop-filter: none;
+  }
+}

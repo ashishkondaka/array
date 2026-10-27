@@ -78,6 +78,7 @@
 @import "@openbot/ui/skill-preview.css";
 /* After the page styles: the transparent window replaces their backgrounds. */
 @import "./styles/window-glass.css";
+@import "./styles/array-glass.css"; /* bubbles: Array Liquid Glass */
 
 @source "../../../packages/ui/src";
 

@@ -13,8 +13,11 @@ export type AppAppearance = (typeof APP_APPEARANCES)[number];
 /** Dark: OpenBot was dark only before this choice existed, so an update does not change the look. */
 export const DEFAULT_APP_APPEARANCE: AppAppearance = "dark";
 
-/** Off: a see-through window is a choice, and only macOS can blur what is behind it. */
-export const DEFAULT_TRANSPARENT_WINDOW = false;
+/**
+ * bubbles: on in Array, which is glass by design. Only macOS can blur what is behind it; main
+ * reports `false` elsewhere. A choice saved in Settings still wins.
+ */
+export const DEFAULT_TRANSPARENT_WINDOW = true;
 
 /** The preference as it is stored and as it crosses IPC. */
 export interface AppAppearancePreference {

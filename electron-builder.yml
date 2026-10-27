@@ -1,6 +1,6 @@
 # bubbles: fork identity, see src/main/bubbles/fork-identity.ts
-appId: app.openbot.bubbles
-productName: OpenBot Bubbles
+appId: app.array.desktop
+productName: Array
 copyright: Copyright © 2026 Synthetify Labs spółka z ograniczoną odpowiedzialnością
 protocols:
   - name: OpenBot invitations

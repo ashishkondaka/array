@@ -1,6 +1,6 @@
 {
   "name": "openbot",
-  "productName": "OpenBot Bubbles",
+  "productName": "Array",
   "desktopName": "openbot.desktop",
   "version": "0.51.1",
   "description": "A local-first multi-agent desktop workspace for Codex, Claude, and Grok.",
@@ -80,7 +80,7 @@
   },
   "scripts": {
     "prepare": "bun scripts/install-git-hooks.ts",
-    "postinstall": "bun scripts/electron-dist-cache.ts restore && bun scripts/install-electron.ts && bun scripts/electron-dist-cache.ts save && bun scripts/stamp-install.ts",
+    "postinstall": "bun scripts/electron-dist-cache.ts restore && bun scripts/install-electron.ts && bun scripts/electron-dist-cache.ts save && bun scripts/stamp-install.ts && bun scripts/bubbles-dev-name.ts",
     "api:start": "bun run --cwd apps/auth-api start",
     "api:build": "bun run --cwd apps/auth-api build",
     "api:images": "bun run --cwd apps/auth-api images",

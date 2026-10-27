@@ -2,7 +2,7 @@ import { defineMessages } from "../../message";
 
 // OpenBot Bubbles fork: floating agent windows.
 export const messages = defineMessages("bubbles", {
-  "bubbles.trayTooltip": "OpenBot Bubbles",
+  "bubbles.trayTooltip": "Array",
   "bubbles.trayShowAll": "Show all bubbles",
   "bubbles.trayHideAll": "Hide all bubbles",
   "bubbles.trayOpenMain": "Open main window",
@@ -32,7 +32,7 @@ export const messages = defineMessages("bubbles", {
   "bubbles.chatRole": "Chat",
   "bubbles.attachHint": "Release to attach to {app}",
   "bubbles.attachTip": "Drag anywhere. Hold Option (Alt) while dropping to attach to a window.",
-  "bubbles.trayQuit": "Quit OpenBot Bubbles",
+  "bubbles.trayQuit": "Quit Array",
   "bubbles.popOut": "Pop out to desktop",
   "bubbles.bringBack": "Bring back",
   "bubbles.poppedOut": "On the desktop",

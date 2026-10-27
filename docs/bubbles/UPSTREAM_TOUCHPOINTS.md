@@ -77,3 +77,17 @@ New files: `src/main/bubbles/attach-target.ts`, `bubble-attach.ts`, `bubble-atta
 | `packages/ui/src/features/sidebar/SidebarTopbar.tsx` | "New chat" item |
 | `packages/ui/src/features/sidebar/sidebar-types.ts` | `bubbleCharacterOf`, `onChooseBubbleCharacter`, `onCreateChat` |
 | `src/renderer/src/features/sidebar/WorkspaceSidebar.tsx` | wire characters and New chat |
+
+## Phase 4 and Array
+
+New files: `src/main/bubbles/local-analyst.ts`, `scripts/export-conversations.ts`,
+`scripts/bubbles-dev-name.ts`, `src/renderer/src/styles/array-glass.css`, `docs/bubbles/FINETUNE.md`.
+
+| File | Hook |
+| --- | --- |
+| `src/main/index.ts` | start the local analyst seed after agent init; retry on `status` events |
+| `package.json` | `productName: "Array"`; `postinstall` ends with `bubbles-dev-name.ts` |
+| `electron-builder.yml` | `appId: app.array.desktop`, `productName: Array` |
+| `packages/contracts/src/app-appearance.ts` | `DEFAULT_TRANSPARENT_WINDOW = true` |
+| `packages/i18n/src/messages/en/window.ts` | native window titles say Array |
+| `src/renderer/src/styles.css` | import `array-glass.css` after `window-glass.css` |

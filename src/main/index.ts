@@ -31,7 +31,12 @@ import { runCauseEffect } from "../backend/effect-boundary";
 import { readAppVariant, resolveAppIconPath, resolveLogoColorIconPath } from "./app-icon";
 import { type ApplicationServices, createApplicationServices } from "./application-services";
 import { type BackgroundTray, createBackgroundTray } from "./background-tray";
-import { type BubbleAttachController, createBubbleAttach } from "./bubbles/bubble-attach-wiring"; // bubbles: attach
+import {
+  type BubbleAttachController,
+  createBubbleAttach,
+  createLocalAnalystSeed,
+  type LocalAnalystSeed,
+} from "./bubbles/bubble-attach-wiring"; // bubbles: attach, local analyst
 import { BubbleWindowManager } from "./bubbles/bubble-window-manager"; // bubbles: window manager
 import {
   BUBBLES_APP_ID,
@@ -447,6 +452,7 @@ const bubbles = new BubbleWindowManager({
 
 // bubbles: drag-to-attach needs the Computer Use driver, so it is built with the services.
 let bubbleAttach: BubbleAttachController | null = null;
+let localAnalyst: LocalAnalystSeed | null = null;
 
 let appIconColorImage: NativeImage | undefined;
 let backgroundTray: BackgroundTray | null = null;
@@ -836,7 +842,10 @@ function requestDesktopNotificationPermission(
       preference,
       showWelcome: () => {
         if (!Notification.isSupported()) return;
-        showRetainedNotification(new Notification({ title: "OpenBot", body: translate("notification.welcome") }));
+        // bubbles: the fork's name
+        showRetainedNotification(
+          new Notification({ title: BUBBLES_APP_NAME, body: translate("notification.welcome") }),
+        );
       },
     }),
   );
@@ -1181,6 +1190,10 @@ if (!hasSingleInstanceLock) {
       service.on("event", (event) => trace.observeAgentEvent(event));
       service.on("event", (event) => forwardAgentEvent("local", event));
       service.on("event", (event) => event.type === "agents-changed" && bubbles.reconcileAgents()); // bubbles: deleted agents
+      localAnalyst = createLocalAnalystSeed(built); // bubbles: local analyst seed
+      service.on("event", (event) => {
+        if (event.type === "status") void Effect.runPromise(localAnalyst?.tryCreate() ?? Effect.void); // bubbles: model catalogue changed
+      });
       // A routine or its owner can be deleted outside the events API. Its route is then revoked here.
       // Turns and channel messages also send these events, so only a deleted owner starts a sync.
       let webhookAgentIds = new Set(service.listAgents().map((agent) => agent.id));
@@ -1405,6 +1418,7 @@ if (!hasSingleInstanceLock) {
       }
       void runCauseEffect(built.agentInitialization.start())
         .then(() => Effect.runPromise(bubbles.restore())) // bubbles: reopen saved bubbles once agents exist
+        .then(() => Effect.runPromise(localAnalyst?.start() ?? Effect.void)) // bubbles: local analyst seed
         .catch((error) => {
           logger.error("Unable to initialize the local agent backend:", toLogValue(error));
         });

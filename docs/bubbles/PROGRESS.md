@@ -152,3 +152,36 @@ dev Electron binary), the throw and dwell by hand, nudges on a real reply.
 Known limits: a provider CLI keeps its own built-in tools; a chat is told not to use them, and its
 file access is limited to its own folder. Computer Use is not turned on for a turn if the agent has
 it off; the bubble does not override the agent's setting.
+
+### Phase 3 follow-up (user feedback on the drag)
+
+- A released orb stays exactly where it was let go: no momentum, no snapping.
+- Attaching needs Option (Alt) held at release (the orb's tooltip says so). With it held, a short
+  rest over a window shows "Release to attach to <App>".
+- A nudge flies the orb over the top centre of the front app window (from the Computer Use window
+  list; the top centre of the display without it), hovers there with a slow bob, and flies home.
+
+## Phase 4: local model persona and export (`bubbles/phase-4-local`)
+
+- Local Analyst seed (`src/main/bubbles/local-analyst.ts`): on a start that finds Ollama
+  (127.0.0.1:11434) or LM Studio (127.0.0.1:1234), the server is saved as a custom endpoint
+  ("Ollama (this computer)", id `local-ollama`, the server's models). Checked live: it found
+  `llama3.2:latest` and saved the endpoint. The agent "Local Analyst" is created once
+  `local-ollama/<model>` is in the model catalogue, which needs OpenCode (OpenBot downloads it on
+  request; not downloaded on this computer, so the agent is not created yet). It retries on every
+  catalogue change and on each start, and runs once.
+- `scripts/export-conversations.ts`: read-only (`node:sqlite` `readOnly`), redacted with
+  `redactText`, JSONL `{"messages":[{role,content}]}` windows under `.openbot-build/exports/`.
+  Checked live on Research (one conversation from three threads). See [FINETUNE.md](FINETUNE.md).
+
+## Array: name and glass (user requests)
+
+- The app is named **Array**: product name, app id `app.array.desktop`, packaged `userData` `Array`,
+  window titles, tray, welcome notification. `scripts/bubbles-dev-name.ts` (end of `postinstall`)
+  renames this checkout's dev `Electron.app` to Array and signs it again ad hoc, so the menu bar and
+  Dock say Array in `bun run dev` too. In-app text that names OpenBot (server names, help, links) is
+  unchanged.
+- Glass UI: the transparent window (macOS blur) is on by default (`DEFAULT_TRANSPARENT_WINDOW`); a
+  saved choice in Settings still wins. `src/renderer/src/styles/array-glass.css` makes it frosted and
+  mostly opaque, and gives the sidebar, composer, menus and dialogs the bubbles' glass material.
+  Reduced transparency turns it solid.
