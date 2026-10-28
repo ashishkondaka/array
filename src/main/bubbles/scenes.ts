@@ -5,7 +5,7 @@
 // the display geometry in, and the window manager does the moving.
 
 import { BUBBLE_LIMITS, type BubbleBounds } from "@openbot/contracts/ipc";
-import { type DesktopWindow, frontWindow, isKnownBrowser } from "./attach-target";
+import { type DesktopWindow, isKnownBrowser, stackedWindows } from "./attach-target";
 
 export type SceneKind = "theater";
 
@@ -34,9 +34,44 @@ export function isFullScreen(window: DesktopWindow, displays: readonly BubbleBou
   );
 }
 
+/** A window with more than this share of it under other windows is not being watched. */
+const COVERED_LIMIT = 0.5;
+/** The grid that measures how much of a window the windows over it cover. */
+const COVER_GRID = 24;
+
+/** Whether a window plays a show: a player app, a video site in a browser, or full screen. */
+function isShow(window: DesktopWindow, displays: readonly BubbleBounds[]): boolean {
+  return (
+    VIDEO_APPS.includes(window.appName) ||
+    (isKnownBrowser(window.appName) && VIDEO_SITES.test(window.title)) ||
+    isFullScreen(window, displays)
+  );
+}
+
 /**
- * The scene the front window makes, or null. Only the front window counts: a video behind the
- * user's work is not being watched.
+ * The share of `window` that `covers` hide, from 0 to 1, measured on a grid of sample points so
+ * overlapping covers count once.
+ */
+export function coveredShare(window: BubbleBounds, covers: readonly BubbleBounds[]): number {
+  if (covers.length === 0 || window.width <= 0 || window.height <= 0) return 0;
+  let hidden = 0;
+  for (let row = 0; row < COVER_GRID; row++) {
+    const y = window.y + ((row + 0.5) / COVER_GRID) * window.height;
+    for (let column = 0; column < COVER_GRID; column++) {
+      const x = window.x + ((column + 0.5) / COVER_GRID) * window.width;
+      if (
+        covers.some((cover) => x >= cover.x && x < cover.x + cover.width && y >= cover.y && y < cover.y + cover.height)
+      )
+        hidden++;
+    }
+  }
+  return hidden / (COVER_GRID * COVER_GRID);
+}
+
+/**
+ * The scene the screen makes, or null: the frontmost show that is mostly in view. A small window
+ * over a video (a chat, a terminal, a note) leaves the show on; a window that hides most of it (the
+ * user's work, OpenBot's own window) ends it. A show behind another show is not the one watched.
  */
 export function detectScene(
   windows: readonly DesktopWindow[],
@@ -44,11 +79,13 @@ export function detectScene(
   bubbleWindowIds: ReadonlySet<number>,
   displays: readonly BubbleBounds[],
 ): Scene | null {
-  const front = frontWindow(windows, bubbleWindowIds);
-  if (!front || front.pid === ownPid) return null;
-  const player = VIDEO_APPS.includes(front.appName);
-  const site = isKnownBrowser(front.appName) && VIDEO_SITES.test(front.title);
-  if (player || site || isFullScreen(front, displays)) return { kind: "theater", window: front };
+  const covers: BubbleBounds[] = [];
+  for (const window of stackedWindows(windows, bubbleWindowIds)) {
+    if (window.pid !== ownPid && isShow(window, displays)) {
+      return coveredShare(window.bounds, covers) < COVERED_LIMIT ? { kind: "theater", window } : null;
+    }
+    covers.push(window.bounds);
+  }
   return null;
 }
 

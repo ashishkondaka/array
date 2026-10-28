@@ -118,21 +118,30 @@ export function frontWindow(
   windows: readonly DesktopWindow[],
   bubbleWindowIds: ReadonlySet<number>,
 ): DesktopWindow | null {
-  let front: DesktopWindow | null = null;
-  for (const window of windows) {
-    if (
-      bubbleWindowIds.has(window.windowId) ||
-      !window.onScreen ||
-      !window.onCurrentSpace ||
-      window.appName === DRIVER_OVERLAY_APP ||
-      window.zIndex === null ||
-      window.bounds.width < MINIMUM_TARGET_SIZE ||
-      window.bounds.height < MINIMUM_TARGET_SIZE
+  return stackedWindows(windows, bubbleWindowIds)[0] ?? null;
+}
+
+/**
+ * The app windows that are in view on this space, front to back: the ones the user sees, with a
+ * known stacking order and a size worth hovering over. The bubbles and the driver's overlay are not
+ * among them.
+ */
+export function stackedWindows(
+  windows: readonly DesktopWindow[],
+  bubbleWindowIds: ReadonlySet<number>,
+): DesktopWindow[] {
+  return windows
+    .filter(
+      (window) =>
+        !bubbleWindowIds.has(window.windowId) &&
+        window.onScreen &&
+        window.onCurrentSpace &&
+        window.appName !== DRIVER_OVERLAY_APP &&
+        window.zIndex !== null &&
+        window.bounds.width >= MINIMUM_TARGET_SIZE &&
+        window.bounds.height >= MINIMUM_TARGET_SIZE,
     )
-      continue;
-    if (!front || (front.zIndex ?? 0) < window.zIndex) front = window;
-  }
-  return front;
+    .sort((a, b) => (b.zIndex ?? 0) - (a.zIndex ?? 0));
 }
 
 /** An app name as the user or an agent types it, against one as macOS reports it. */

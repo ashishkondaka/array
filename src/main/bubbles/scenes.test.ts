@@ -3,7 +3,16 @@
 import { BUBBLE_LIMITS } from "@openbot/contracts/ipc";
 import { describe, expect, it } from "vitest";
 import type { DesktopWindow } from "./attach-target";
-import { detectScene, gazeToward, isFullScreen, NO_SCENE, nextSceneState, sameStage, theaterSeats } from "./scenes";
+import {
+  coveredShare,
+  detectScene,
+  gazeToward,
+  isFullScreen,
+  NO_SCENE,
+  nextSceneState,
+  sameStage,
+  theaterSeats,
+} from "./scenes";
 
 const DISPLAY = { x: 0, y: 0, width: 1512, height: 982 };
 const WORK = { x: 0, y: 38, width: 1512, height: 868 };
@@ -31,8 +40,47 @@ describe("detectScene", () => {
     expect(detectScene([window(1, "Keynote", { bounds: DISPLAY })], 100, new Set(), [DISPLAY])?.kind).toBe("theater");
   });
 
-  it("is nothing for ordinary work, a video behind the front window, or OpenBot itself", () => {
-    expect(detectScene([window(1, "QuickTime Player"), window(2, "Terminal")], 100, new Set(), [DISPLAY])).toBeNull();
+  it("stays a show under a small window, and ends under one that hides most of it", () => {
+    const video = window(1, "Safari", {
+      title: "Keynote — YouTube",
+      bounds: { x: 62, y: 33, width: 1450, height: 949 },
+    });
+    const terminal = window(2, "Terminal", { bounds: { x: 521, y: 442, width: 580, height: 385 } });
+    const work = window(3, "Array", { pid: 100, bounds: { x: 117, y: 115, width: 1200, height: 820 } });
+    expect(detectScene([terminal, video], 100, new Set(), [DISPLAY])?.window.windowId).toBe(1);
+    expect(detectScene([work, video], 100, new Set(), [DISPLAY])).toBeNull();
+    expect(
+      detectScene(
+        [terminal, window(4, "Mail", { bounds: { x: 700, y: 100, width: 420, height: 632 } }), video],
+        100,
+        new Set(),
+        [DISPLAY],
+      )?.window.windowId,
+    ).toBe(1);
+  });
+
+  it("measures the covered share once for overlapping covers", () => {
+    const stage = { x: 0, y: 0, width: 100, height: 100 };
+    expect(coveredShare(stage, [])).toBe(0);
+    expect(coveredShare(stage, [{ x: 0, y: 0, width: 50, height: 100 }])).toBeCloseTo(0.5, 2);
+    expect(
+      coveredShare(stage, [
+        { x: 0, y: 0, width: 50, height: 100 },
+        { x: 0, y: 0, width: 50, height: 100 },
+      ]),
+    ).toBeCloseTo(0.5, 2);
+    expect(coveredShare(stage, [{ x: -10, y: -10, width: 200, height: 200 }])).toBe(1);
+  });
+
+  it("is nothing for ordinary work, a video hidden by the front window, or OpenBot itself", () => {
+    expect(
+      detectScene(
+        [window(1, "QuickTime Player"), window(2, "Terminal", { bounds: { x: 100, y: 60, width: 1200, height: 800 } })],
+        100,
+        new Set(),
+        [DISPLAY],
+      ),
+    ).toBeNull();
     expect(detectScene([window(1, "Safari", { title: "Docs — Google" })], 100, new Set(), [DISPLAY])).toBeNull();
     expect(detectScene([window(1, "Array", { pid: 100, bounds: DISPLAY })], 100, new Set(), [DISPLAY])).toBeNull();
     expect(detectScene([window(1, "Array", { bounds: DISPLAY })], 100, new Set([1]), [DISPLAY])).toBeNull();

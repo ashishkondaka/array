@@ -200,9 +200,11 @@ Dock's icons, so the Dock stop is the middle of the strip; it is skipped when th
 ### Scenes: the theater
 
 The bubbles react to what the screen is doing. `src/main/bubbles/scenes.ts` is the pure part: a
-scene is the front window when it is a show (a player app such as QuickTime Player, TV, IINA or
-VLC; a known browser whose title names a video site; or any window gone full screen), never OpenBot's
-own window or a bubble. `BubbleAttachController` looks every 4 s (`#sceneStep`), and only when
+scene is the frontmost show (a player app such as QuickTime Player, TV, IINA or VLC; a known
+browser whose title names a video site; or any window gone full screen) that is mostly in view:
+`coveredShare` samples the window on a grid, and windows over it that hide less than half of it (a
+terminal, a chat, a note) leave the show on, while one that hides more (the user's work, OpenBot's
+own window) ends it. Bubbles never count as cover. `BubbleAttachController` looks every 4 s (`#sceneStep`), and only when
 `bubbles.canStage()`: lively bubbles on, not hidden, a free collapsed orb out; otherwise nothing is
 read. `nextSceneState` settles a show after two ticks of the same stage and ends it after two ticks
 without, so a glance at a video moves nobody. `BubbleWindowManager.setScene` seats the audience:
