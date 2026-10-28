@@ -19,7 +19,7 @@ export function setAttachedWindowSource(read: (agentId: string) => AttachedSurfa
  * which carries the screenshot. Nothing here grants anything: each action still goes through the
  * agent's approval policy.
  */
-export function attachedWindowBlock(surface: AttachedSurface): string {
+function attachedWindowBlock(surface: AttachedSurface): string {
   const { bounds } = surface;
   const lines = [
     ATTACHED_WINDOW_BLOCK_START,

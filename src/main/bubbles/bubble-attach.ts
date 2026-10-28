@@ -41,7 +41,7 @@ const FOLLOW_INTERVAL_MS = 2_000;
 /** An attached orb is wider: its chip sits left of it. */
 const ATTACHED_WIDTH_DELTA = BUBBLE_LIMITS.attachedOrbWidth - BUBBLE_LIMITS.orbSize;
 
-export interface WindowReads {
+interface WindowReads {
   listWindows: () => Effect.Effect<unknown, unknown>;
   windowState: (pid: number, windowId: number, query: string) => Effect.Effect<unknown, unknown>;
   listApps: () => Effect.Effect<unknown, unknown>;
@@ -72,7 +72,7 @@ export interface BubbleAttachOptions {
   reportIssue: (agentId: string, issue: BubbleAttachIssue | null) => void;
 }
 
-export interface ObservedWork {
+interface ObservedWork {
   pid: number | null;
   windowId: number | null;
   point: { x: number; y: number } | null;
@@ -83,7 +83,7 @@ const WORK_TICK_MS = 120;
 /** The orb drifts to a new action point only when it moved this far, so it does not jitter. */
 const WORK_MOVE_MIN = 16;
 
-export function attachIssue(state: ComputerUseState): BubbleAttachIssue {
+function attachIssue(state: ComputerUseState): BubbleAttachIssue {
   if (state.status === "unsupported") return "unsupported-platform";
   if (state.status === "permissions-required") {
     const missing = state.permissions.find((permission) => !permission.granted);

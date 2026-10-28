@@ -25,6 +25,8 @@ const config: KnipConfig = {
     "xterm",
     // Builds the remote desktop runtime.
     "cmake",
+    // Renames the dev app's bundle in the Bubbles fork (scripts/bubbles-dev-name.ts).
+    "plutil",
     // Rewrite and inspect macOS dylib load paths.
     "otool",
     "install_name_tool",

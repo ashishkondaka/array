@@ -7,7 +7,7 @@
 import { BUBBLE_LIMITS, type BubbleBounds } from "@openbot/contracts/ipc";
 import { type DesktopWindow, isKnownBrowser, stackedWindows } from "./attach-target";
 
-export type SceneKind = "theater";
+type SceneKind = "theater";
 
 export interface Scene {
   kind: SceneKind;
@@ -132,7 +132,7 @@ export function sameStage(a: Scene | null, b: Scene | null): boolean {
 }
 
 /** A scene must hold for this many ticks before the bubbles move: a glance at a video is not a show. */
-export const SCENE_SETTLE_TICKS = 2;
+const SCENE_SETTLE_TICKS = 2;
 
 export interface SceneState {
   /** The show the bubbles are at, or null. */

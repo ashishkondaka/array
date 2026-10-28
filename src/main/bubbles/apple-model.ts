@@ -26,11 +26,11 @@ import { PreferenceStore } from "../preference-file";
 
 const logger = createOpenBotLogger("apple-model");
 
-export const APPLE_MODEL_FILE = "openbot-apple-model-v1.json";
+const APPLE_MODEL_FILE = "openbot-apple-model-v1.json";
 export const APPLE_MODEL_ENDPOINT_ID = "apple-intelligence";
 export const APPLE_MODEL_ID = "apple-foundation";
 /** A fixed port keeps the saved endpoint's address stable; the server falls back to any port if it is taken. */
-export const APPLE_MODEL_PORT = 48127;
+const APPLE_MODEL_PORT = 48127;
 /** The server prints its first line as soon as it listens; a build that cannot start is given this long. */
 const HELLO_TIMEOUT_MS = 8_000;
 
@@ -80,7 +80,7 @@ export function readServerHello(line: string): ServerHello | null {
   }
 }
 
-export function appleModelBaseUrl(port: number): string {
+function appleModelBaseUrl(port: number): string {
   return `http://127.0.0.1:${port}/v1`;
 }
 
@@ -95,7 +95,7 @@ export function appleModelEndpoint(port: number): SaveCustomProviderInput {
   };
 }
 
-export function appleAnalystInput(model: AgentModelOption): CreateAgentInput {
+function appleAnalystInput(model: AgentModelOption): CreateAgentInput {
   return {
     name: "Apple Analyst",
     description:

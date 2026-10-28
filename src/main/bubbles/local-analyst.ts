@@ -23,7 +23,7 @@ import { PreferenceStore } from "../preference-file";
 
 const logger = createOpenBotLogger("local-analyst");
 
-export const LOCAL_ANALYST_FILE = "openbot-local-analyst-v1.json";
+const LOCAL_ANALYST_FILE = "openbot-local-analyst-v1.json";
 const PROBE_TIMEOUT_MS = 1_500;
 /** Ollama first: it is the one most people run. */
 const LOCAL_SERVERS: readonly DefaultModelServerId[] = ["ollama", "lmstudio"];
@@ -74,7 +74,7 @@ export function seededModel<Model extends Pick<AgentModelOption, "id">>(
   return catalogue.find((model) => model.id === id) ?? null;
 }
 
-export function localAnalystInput(model: AgentModelOption): CreateAgentInput {
+function localAnalystInput(model: AgentModelOption): CreateAgentInput {
   return {
     name: "Local Analyst",
     description:

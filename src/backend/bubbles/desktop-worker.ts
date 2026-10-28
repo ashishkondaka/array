@@ -16,7 +16,7 @@ const DESKTOP_BLOCK_END = "</openbot_desktop>";
 
 export const GO_TO_APP_TOOL = "go_to_app";
 
-export const goToAppToolSchema = z.strictObject({
+const goToAppToolSchema = z.strictObject({
   app: z.string().trim().min(1).max(80),
 });
 

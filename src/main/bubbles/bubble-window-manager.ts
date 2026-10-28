@@ -52,12 +52,10 @@ import { gazeToward, theaterSeats } from "./scenes";
 
 const logger = createOpenBotLogger("bubbles");
 
-export const BUBBLES_TOGGLE_SHORTCUT = "CommandOrControl+Shift+Space";
-/** A pointer that moves less than this between down and up is a click, not a drag. */
-export const BUBBLE_CLICK_SLOP = 4;
+const BUBBLES_TOGGLE_SHORTCUT = "CommandOrControl+Shift+Space";
 const LOCAL_SERVER_ID = "local";
 
-export interface BubbleAgent {
+interface BubbleAgent {
   id: string;
   name: string;
 }
