@@ -15,6 +15,8 @@ const ALLOWED_DIRECTORIES = [
   "apps/auth-api/public/",
   "apps/auth-api/content-art/",
   "apps/auth-api/src/content/guides/media/",
+  // Screenshots that the README shows.
+  "docs/bubbles/images/",
 ] as const;
 
 const IMAGE_FILE = /\.(avif|bmp|gif|heic|icns|ico|jpe?g|mov|mp4|png|svg|tiff?|webm|webp)$/i;
