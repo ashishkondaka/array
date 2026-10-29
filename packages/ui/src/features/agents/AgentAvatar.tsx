@@ -65,7 +65,8 @@ interface AgentAvatarProps {
   mood?: AvatarMood;
   cycleOffset?: number;
   animationOffset?: number;
-  shape?: SupportedAvatarSilhouetteId;
+  /** bubbles: undefined, like the inner avatar's, keeps the seeded silhouette. */
+  shape?: SupportedAvatarSilhouetteId | undefined;
   /**
    * The eyes follow the pointer, and a press makes the agent nod. The avatar then moves without hover,
    * so use it only where few avatars show. A photo avatar and reduced motion ignore it.

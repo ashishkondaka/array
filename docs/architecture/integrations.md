@@ -501,7 +501,7 @@ Team API adapters are permanent (see [Team API compatibility](team-api.md)). Wor
 ## Test a sign-in through a joined server
 
 1. Two clients: `bun run dev:test-client` starts the services, the app and a second client with its
-   own profile (see [README.md: Commands](../../README.md#commands)). Join the app from the second
+   own profile (see [the upstream README: Commands](../OPENBOT_README.md#commands)). Join the app from the second
    client as an admin. Add a URL MCP server with OAuth on the host, and press Sign in on the client.
    The page must open in the client's browser, and the host must show the server as signed in.
 2. Paste fallback: hold port 28417 on the client with another program, and sign in again. The dialog

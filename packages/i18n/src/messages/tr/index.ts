@@ -8,6 +8,7 @@ import { messages as app } from "./app";
 import { messages as attachment } from "./attachment";
 import { messages as billing } from "./billing";
 import { messages as browser } from "./browser";
+import { messages as bubbles } from "./bubbles"; // bubbles: fork strings
 import { messages as channel } from "./channel";
 import { messages as chat } from "./chat";
 import { messages as composer } from "./composer";
@@ -65,6 +66,7 @@ export const tr = {
   ...dialog,
   ...startup,
   ...window,
+  ...bubbles, // bubbles: fork strings
   ...settings,
   ...billing,
   ...provider,

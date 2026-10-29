@@ -98,12 +98,13 @@ export class ThinkingCapabilities {
   /** One request's JSON, or null for any failure: an endpoint that is down says nothing. */
   #json(url: string, body?: ShowRequest): Effect.Effect<unknown> {
     return Effect.tryPromise(async () => {
-      const response = await this.#deps.fetch(url, {
-        method: body ? "POST" : "GET",
-        headers: body ? { "content-type": "application/json" } : undefined,
-        body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
+      const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+      const response = await this.#deps.fetch(
+        url,
+        body
+          ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }
+          : { method: "GET", signal },
+      );
       return response.ok ? response.json() : null;
     }).pipe(Effect.catch(() => Effect.succeed(null)));
   }

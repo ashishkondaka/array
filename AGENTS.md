@@ -180,7 +180,7 @@ See [account service setup](apps/auth-api/README.md) for loading and deployment 
 - Reuse a running dev instance. `bun run dev` opens a profile tied to this worktree; `--shared`
   opens the shared `OpenBot Dev` profile. Use the ports the stack reports rather than a fixed port.
 
-See [README.md — Commands](README.md#commands) for the flags these commands take, and
+See [the upstream README — Commands](docs/OPENBOT_README.md#commands) for the flags these commands take, and
 [docs/architecture/change-rules.md](docs/architecture/change-rules.md#change-rules) for why the registry works this way, when a dev command
 does not behave as expected.
 
