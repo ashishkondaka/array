@@ -24,7 +24,7 @@ git grep -nE "(//|#|/\*\*?|\{/\*) bubbles:" -- ':!docs/bubbles'
 
 ## Phase 1: bubble windows
 
-New files: `packages/contracts/src/ipc-bubbles.ts`, `packages/i18n/src/messages/en/bubbles.ts`,
+New files: `packages/contracts/src/ipc-bubbles.ts`, `packages/i18n/src/messages/*/bubbles.ts`,
 `packages/ui/src/features/bubbles/*`, `src/main/bubbles/*`, `src/main/ipc/bubbles-*.ts`,
 `src/preload/bubbles-decoding.ts`, `src/renderer/src/features/bubbles/*`,
 `src/renderer/stories/BubbleOrb.stories.tsx`.
@@ -33,7 +33,7 @@ New files: `packages/contracts/src/ipc-bubbles.ts`, `packages/i18n/src/messages/
 | --- | --- |
 | `packages/contracts/src/ipc.ts` | re-export `ipc-bubbles` |
 | `packages/contracts/src/ipc-endpoints.ts` | `bubbles` group and its `IPC_GROUP_PATHS` entry |
-| `packages/i18n/src/messages/en/index.ts` | spread the `bubbles` catalog |
+| `packages/i18n/src/messages/*/index.ts` | spread the `bubbles` catalog (empty outside English) |
 | `packages/ui/package.json` | four `./features/bubbles/*` exports |
 | `packages/ui/src/features/sidebar/sidebar-types.ts` | `onPopOutAgent`, `onBringBackAgent`, `poppedOutAgentIds` props |
 | `packages/ui/src/features/sidebar/SidebarAgentContextMenu.tsx` | "Pop out to desktop" / "Bring back" item |
@@ -72,7 +72,7 @@ New files: `src/main/bubbles/attach-target.ts`, `bubble-attach.ts`, `bubble-atta
 | `src/backend/agent/developer-instructions.ts` | `isTurnContextBlock` knows `<openbot_attached_window>` |
 | `src/main/cua-driver-daemon-client.ts` | read-only `windowState(pid, windowId, query)` |
 | `src/main/index.ts` | build `BubbleAttachController` with the services; teardown |
-| `packages/ui/src/features/agents/AgentAvatar.tsx` | optional `fps` prop (a moving orb draws at 120 fps) |
+| `packages/ui/src/features/agents/AgentAvatar.tsx` | optional `fps` prop (a moving orb draws at 120 fps); `shape` accepts undefined |
 | `packages/ui/src/features/sidebar/SidebarAgentContextMenu.tsx` | "Bubble character" submenu |
 | `packages/ui/src/features/sidebar/SidebarTopbar.tsx` | "New chat" item |
 | `packages/ui/src/features/sidebar/sidebar-types.ts` | `bubbleCharacterOf`, `onChooseBubbleCharacter`, `onCreateChat` |
